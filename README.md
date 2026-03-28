@@ -121,7 +121,7 @@ cv_evaluator/
 
 ```bash
 # Cloner le projet
-git clone <repo-url>
+git clone <[repo-url](https://github.com/yacineberkani/cv_evaluator)>
 cd cv_evaluator
 
 # Créer un environnement virtuel
