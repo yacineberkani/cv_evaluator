@@ -193,6 +193,52 @@ st.markdown("""
         box-shadow: 0 1px 4px rgba(0,0,0,0.12);
     }
 
+    /* ── Barème card ── */
+    .bareme-card {
+        padding: 1.4rem 1.6rem;
+        border-radius: 16px;
+        color: white;
+        box-shadow: 0 6px 24px rgba(0,0,0,0.22);
+        margin-bottom: 1.2rem;
+        display: flex;
+        align-items: center;
+        gap: 1.2rem;
+        border: 1px solid rgba(255,255,255,0.15);
+    }
+    .bareme-card .bc-icon  { font-size: 3rem; line-height: 1; flex-shrink: 0; }
+    .bareme-card .bc-body  { flex: 1; }
+    .bareme-card .bc-label { font-size: 1.55rem; font-weight: 800; letter-spacing: -.5px; margin: 0; line-height: 1.15; }
+    .bareme-card .bc-desc  { font-size: .95rem; opacity: .85; margin: .3rem 0 0; }
+    .bareme-card .bc-score { font-size: 2.6rem; font-weight: 900; line-height: 1; flex-shrink: 0; text-align:right; }
+    .bareme-card .bc-score span { font-size: 1.1rem; font-weight: 500; opacity: .8; }
+
+    /* ── Barème scale strip ── */
+    .bareme-scale {
+        display: flex;
+        border-radius: 8px;
+        overflow: hidden;
+        height: 36px;
+        margin: .6rem 0 1.2rem;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+    }
+    .bareme-scale-seg {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: .72rem;
+        font-weight: 600;
+        color: white;
+        transition: opacity .2s;
+        cursor: default;
+    }
+    .bareme-scale-seg.active {
+        outline: 3px solid white;
+        outline-offset: -2px;
+        z-index: 1;
+        border-radius: 4px;
+    }
+    .bareme-scale-seg.inactive { opacity: .38; }
+
     /* ── Reset banner ── */
     .reset-banner {
         display: flex;
@@ -220,6 +266,95 @@ def get_score_class(score_100: float) -> str:
     return "score-low"
 
 
+# ── Barème d'appréciation officiel ──
+BAREME = [
+    {
+        "range": (0, 10),
+        "label": "Inexploitable",
+        "short": "DC inutilisable, décrédibilisant.",
+        "emoji": "🚫",
+        "gradient": "linear-gradient(135deg,#3a0000,#8b0000)",
+        "text": "#ffcdd2",
+        "bar_color": "#c62828",
+    },
+    {
+        "range": (11, 12),
+        "label": "Très insuffisant",
+        "short": "DC incomplet, brouillon, donne une mauvaise image.",
+        "emoji": "❌",
+        "gradient": "linear-gradient(135deg,#7f0000,#d32f2f)",
+        "text": "#ffcdd2",
+        "bar_color": "#e53935",
+    },
+    {
+        "range": (13, 14),
+        "label": "Insuffisant",
+        "short": "DC exploitable mais faible, non vendeur.",
+        "emoji": "⚠️",
+        "gradient": "linear-gradient(135deg,#bf360c,#f4511e)",
+        "text": "#ffe0b2",
+        "bar_color": "#f4511e",
+    },
+    {
+        "range": (15, 16),
+        "label": "Correct",
+        "short": "DC utilisable mais perfectible.",
+        "emoji": "📋",
+        "gradient": "linear-gradient(135deg,#e65100,#fb8c00)",
+        "text": "#fff3e0",
+        "bar_color": "#01ff1a",
+    },
+    {
+        "range": (17, 17),
+        "label": "Bon",
+        "short": "DC solide, clair, cohérent, peut être transmis.",
+        "emoji": "👍",
+        "gradient": "linear-gradient(135deg,#1565c0,#1e88e5)",
+        "text": "#e3f2fd",
+        "bar_color": "#3cff00",
+    },
+    {
+        "range": (18, 19),
+        "label": "Très bon",
+        "short": "DC percutant, vendeur, bien rédigé.",
+        "emoji": "🌟",
+        "gradient": "linear-gradient(135deg,#1b5e20,#2e7d32)",
+        "text": "#e8f5e9",
+        "bar_color": "#00ff0d",
+    },
+    {
+        "range": (20, 20),
+        "label": "Excellent",
+        "short": "DC exemplaire, parfaitement aligné, riche en résultats et démonstrations.",
+        "emoji": "🏆",
+        "gradient": "linear-gradient(135deg,#4a148c,#7b1fa2)",
+        "text": "#f3e5f5",
+        "bar_color": "#48aa24",
+    },
+]
+
+ALL_LEVELS = [
+    (0,  10, "Inexploitable",    "🚫", "#c62828"),
+    (11, 12, "Très insuffisant", "❌", "#e53935"),
+    (13, 14, "Insuffisant",      "⚠️", "#f4511e"),
+    (15, 16, "Correct",          "📋", "#fb8c00"),
+    (17, 17, "Bon",              "👍", "#1e88e5"),
+    (18, 19, "Très bon",         "🌟", "#43a047"),
+    (20, 20, "Excellent",        "🏆", "#8e24aa"),
+]
+
+
+def get_bareme(note_sur_20: float) -> dict:
+    """Return the matching barème entry for a /20 score."""
+    n = round(note_sur_20)
+    for entry in BAREME:
+        lo, hi = entry["range"]
+        if lo <= n <= hi:
+            return entry
+    # Fallback: clamp to extremes
+    return BAREME[0] if n < 10 else BAREME[-1]
+
+
 def reset_evaluation():
     """Clear all evaluation-related session state keys."""
     for key in ["report", "cv_text", "evaluated_filename"]:
@@ -233,12 +368,15 @@ def reset_evaluation():
 def render_header():
     st.markdown("""
     <div class="main-header">
-        <h1>
-            <img src="https://www.jems-group.com/wp-content/uploads/2021/12/Logo.svg"
-                 alt="JEMS"
-                 style="height:1.4em; vertical-align:middle; margin-right:0.4em; filter:brightness(0) invert(1);">
-            CV Evaluator
-        </h1>
+<h1>
+  <img src="https://www.jems-group.com/wp-content/uploads/2021/12/Logo.svg"
+       alt="JEMS Group Logo"
+       style="height: 1.5em; vertical-align: middle; margin-right: 0.3em;">
+
+  <img src="https://readme-typing-svg.demolab.com?font=Bungee+Spice&size=30&duration=3000&pause=800&color=FFFFFF&vCenter=false&width=250&lines=CV+Evaluator"
+       alt="CV Evaluator"
+       style="vertical-align: middle;">
+</h1>
         <p class="subtitle">Système Multi-Agents d'Évaluation de CV propulsé par Gemini AI</p>
         <div class="badge-row">
             <span class="badge">⚡ 6 agents spécialisés</span>
@@ -297,6 +435,19 @@ def render_sidebar():
         """)
 
         st.divider()
+        st.markdown("### 🏅 Barème /20")
+        for lo, hi, label, emoji, color in ALL_LEVELS:
+            range_txt = f"{lo}" if lo == hi else f"{lo}–{hi}"
+            st.markdown(
+                f'<div style="display:flex;align-items:center;gap:.5rem;margin:.18rem 0;">'
+                f'<span style="font-size:.8rem;background:{color};color:white;'
+                f'border-radius:4px;padding:.1rem .45rem;font-weight:600;white-space:nowrap;">'
+                f'{range_txt}</span>'
+                f'<span style="font-size:.82rem;">{emoji} {label}</span></div>',
+                unsafe_allow_html=True,
+            )
+
+        st.divider()
         st.caption("v1.0.0 · LangChain + Gemini · Pydantic Strict")
 
         return api_key, model
@@ -307,46 +458,121 @@ def render_sidebar():
 # ══════════════════════════════════════════════
 
 def render_scores(report: FinalReport):
-    scoring = report.scoring
+    scoring   = report.scoring
+    score_20  = scoring.note_finale_sur_20
     score_100 = scoring.note_finale_sur_100
     score_class = get_score_class(score_100)
+    bareme    = get_bareme(score_20)
 
-    st.markdown('<div class="section-title">📊 Scores globaux</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-title">📊 Résultat & Appréciation</div>', unsafe_allow_html=True)
 
-    col_main = st.columns([2, 1, 1])
-    with col_main[0]:
+    # ── Row 1 : barème card + recommandation + verdict ──
+    col_bar, col_rec, col_ver = st.columns([3, 1, 1])
+
+    with col_bar:
+        # Main appreciation card driven by barème
         st.markdown(f"""
-        <div class="score-card {score_class}">
-            <div style="font-size:3.2rem;font-weight:800;line-height:1;">{scoring.note_finale_sur_20:.1f}<span style="font-size:1.4rem;">/20</span></div>
-            <div style="font-size:1rem;opacity:.85;margin-top:.3rem;">{score_100:.1f}/100 &nbsp;·&nbsp; {scoring.note_finale_sur_10:.1f}/10</div>
+        <div class="bareme-card" style="background:{bareme['gradient']};">
+            <div class="bc-icon">{bareme['emoji']}</div>
+            <div class="bc-body">
+                <p class="bc-label" style="color:{bareme['text']};">{bareme['label']}</p>
+                <p class="bc-desc"  style="color:{bareme['text']};">{bareme['short']}</p>
+                <p class="bc-desc"  style="color:{bareme['text']};margin-top:.5rem;font-size:.82rem;">
+                    {score_100:.1f} / 100 &nbsp;·&nbsp; {scoring.note_finale_sur_10:.1f} / 10
+                </p>
+            </div>
+            <div class="bc-score" style="color:{bareme['text']};">{score_20:.1f}<br><span>/ 20</span></div>
         </div>
         """, unsafe_allow_html=True)
 
-    with col_main[1]:
+    with col_rec:
+        rec       = report.quality_control.recommandation
+        rec_emoji = {"Oui": "✅", "Non": "❌", "Peut-être": "⚠️"}.get(rec, "❓")
+        rec_color = {"Oui": "#155724", "Non": "#721c24", "Peut-être": "#856404"}.get(rec, "#6c757d")
+        rec_bg    = {"Oui": "#d4edda", "Non": "#f8d7da", "Peut-être": "#fff3cd"}.get(rec, "#f0f2f8")
+        st.markdown(f"""
+        <div class="score-card" style="background:{rec_bg};height:100%;">
+            <div style="font-size:2rem;">{rec_emoji}</div>
+            <div style="font-size:.85rem;font-weight:600;color:{rec_color};margin-top:.4rem;">
+                Recommandation<br><span style="font-size:1.05rem;">{rec}</span>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    with col_ver:
         verdict_label = report.quality_control.verdict.replace("_", " ").title()
         verdict_emoji = {"profil vendeur": "🌟", "profil banal": "😐", "profil intermediaire": "🤔"}.get(
             report.quality_control.verdict.replace("_", " "), "❓"
         )
         st.markdown(f"""
-        <div class="score-card" style="background:#f0f2f8;">
+        <div class="score-card" style="background:#f0f2f8;height:100%;">
             <div style="font-size:2rem;">{verdict_emoji}</div>
-            <div style="font-size:.95rem;font-weight:600;color:#1a1a2e;margin-top:.4rem;">{verdict_label}</div>
+            <div style="font-size:.85rem;font-weight:600;color:#1a1a2e;margin-top:.4rem;">{verdict_label}</div>
         </div>
         """, unsafe_allow_html=True)
 
-    with col_main[2]:
-        rec = report.quality_control.recommandation
-        rec_emoji = {"Oui": "✅", "Non": "❌", "Peut-être": "⚠️"}.get(rec, "❓")
-        rec_color = {"Oui": "#155724", "Non": "#721c24", "Peut-être": "#856404"}.get(rec, "#6c757d")
-        rec_bg    = {"Oui": "#d4edda", "Non": "#f8d7da", "Peut-être": "#fff3cd"}.get(rec, "#f0f2f8")
-        st.markdown(f"""
-        <div class="score-card" style="background:{rec_bg};">
-            <div style="font-size:2rem;">{rec_emoji}</div>
-            <div style="font-size:.95rem;font-weight:600;color:{rec_color};margin-top:.4rem;">Recommandation<br>{rec}</div>
-        </div>
-        """, unsafe_allow_html=True)
+    
+    
 
-    # Detail scores
+    # Build proportional segments (total span = 20 notes)
+    total_span = 21   # 0-20 inclusive → 21 values
+    active_lo, active_hi = bareme["range"]
+
+    segments_html = ""
+    for lo, hi, label, emoji, color in ALL_LEVELS:
+        span     = hi - lo + 1
+        width_pct = span / total_span * 100
+        is_active = (lo == active_lo)
+        css_class = "bareme-scale-seg active" if is_active else "bareme-scale-seg inactive"
+        range_txt = f"{lo}" if lo == hi else f"{lo}–{hi}"
+        segments_html += (
+            f'<div class="{css_class}" '
+            f'style="width:{width_pct:.1f}%;background:{color};" '
+            f'title="{label} ({range_txt}/20)">'
+            f'{emoji} {range_txt}'
+            f'</div>'
+        )
+
+    st.markdown(
+        f'<div class="bareme-scale">{segments_html}</div>',
+        unsafe_allow_html=True,
+    )
+
+    # Legend table
+    legend_rows = ""
+    for lo, hi, label, emoji, color in ALL_LEVELS:
+        is_active = (lo == active_lo)
+        range_txt = f"{lo}" if lo == hi else f"{lo} à {hi}"
+        weight    = "font-weight:700;" if is_active else ""
+        border    = f"border-left:4px solid {color};padding-left:.5rem;" if is_active else "padding-left:.74rem;"
+        bg        = f"background:rgba(0,0,0,0.04);border-radius:6px;" if is_active else ""
+        # find matching short description
+        desc = next(e["short"] for e in BAREME if e["range"][0] == lo)
+        legend_rows += (
+            f'<tr style="{weight}{bg}">'
+            f'<td style="{border}white-space:nowrap;">{emoji} <strong>{range_txt}/20</strong></td>'
+            f'<td style="padding:0 1rem;white-space:nowrap;">{label}</td>'
+            f'<td style="color:#555;font-size:.88rem;">{desc}</td>'
+            f'</tr>'
+        )
+
+    st.markdown(
+        f"""
+        <table style="width:100%;border-collapse:collapse;font-size:.9rem;margin-bottom:1.2rem;">
+          <thead>
+            <tr style="color:#888;font-size:.78rem;border-bottom:1px solid #e0e0e0;">
+              <th style="padding:.3rem .5rem;text-align:left;">Note</th>
+              <th style="padding:.3rem 1rem;text-align:left;">Appréciation</th>
+              <th style="padding:.3rem;text-align:left;">Description</th>
+            </tr>
+          </thead>
+          <tbody>{legend_rows}</tbody>
+        </table>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    # ── Row 3 : detail by criterion ──
     st.markdown('<div class="section-title">📈 Détail par critère</div>', unsafe_allow_html=True)
     cols = st.columns(4)
     for i, detail in enumerate(scoring.details):
