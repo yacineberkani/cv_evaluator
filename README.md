@@ -121,7 +121,7 @@ cv_evaluator/
 
 ```bash
 # Cloner le projet
-git clone <https://github.com/yacineberkani/cv_evaluator>
+git clone https://github.com/yacineberkani/cv_evaluator.git
 cd cv_evaluator
 
 # Créer un environnement virtuel
@@ -185,4 +185,4 @@ Le `ScoringAgent` effectue le calcul via LLM puis le valide programmatiquement.
 
 ## 📄 Licence
 
-MIT
+JEMSLABS
