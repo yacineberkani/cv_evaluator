@@ -10,7 +10,7 @@ import sys
 import logging
 from datetime import datetime
 from dotenv import load_dotenv
-
+import plotly.graph_objects as go
 # ── Setup ──
 load_dotenv()
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
@@ -255,6 +255,39 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 
+
+
+def draw_gauge(score, title, max_val=20):
+    # Logique des couleurs demandée
+    if max_val == 20:
+        if score <= 10: color = "#FF0000"          # Rouge
+        elif score <= 12: color = "#FF4500"        # Rouge-Orange
+        elif score <= 14: color = "#FFA500"        # Orange
+        elif score <= 16: color = "#90EE90"        # Vert clair
+        elif score == 17: color = "#228B22"        # Vert
+        elif score <= 19: color = "#006400"        # Vert foncé
+        else: color = "#004400"                    # Vert extrême
+    elif max_val == 10:
+        color = "#4f6ef7" # Couleur par défaut pour les sous-scores
+    else:
+        color = "#764ba2"
+
+    fig = go.Figure(go.Indicator(
+        mode = "gauge+number",
+        value = score,
+        domain = {'x': [0, 1], 'y': [0, 1]},
+        title = {'text': title, 'font': {'size': 18}},
+        gauge = {
+            'axis': {'range': [0, max_val], 'tickwidth': 1},
+            'bar': {'color': color},
+            'bgcolor': "white",
+            'borderwidth': 2,
+            'bordercolor': "#e0e0e0",
+        }
+    ))
+    fig.update_layout(height=200, margin=dict(l=20, r=20, t=50, b=20))
+    return fig
+
 # ══════════════════════════════════════════════
 # HELPERS
 # ══════════════════════════════════════════════
@@ -483,141 +516,42 @@ def render_sidebar():
 # ══════════════════════════════════════════════
 
 def render_scores(report: FinalReport):
-    scoring   = report.scoring
-    score_20  = scoring.note_finale_sur_20
-    score_100 = scoring.note_finale_sur_100
-    score_class = get_score_class(score_100)
-    bareme    = get_bareme(score_20)
-
-    st.markdown('<div class="section-title">📊 Résultat & Appréciation</div>', unsafe_allow_html=True)
-
-    # ── Row 1 : barème card + recommandation + verdict ──
-    col_bar, col_rec, col_ver = st.columns([3, 1, 1])
-
-    with col_bar:
-        # Main appreciation card driven by barème
-        st.markdown(f"""
-        <div class="bareme-card" style="background:{bareme['gradient']};">
-            <div class="bc-icon">{bareme['emoji']}</div>
-            <div class="bc-body">
-                <p class="bc-label" style="color:{bareme['text']};">{bareme['label']}</p>
-                <p class="bc-desc"  style="color:{bareme['text']};">{bareme['short']}</p>
-                <p class="bc-desc"  style="color:{bareme['text']};margin-top:.5rem;font-size:.82rem;">
-                    {score_100:.1f} / 100 &nbsp;·&nbsp; {scoring.note_finale_sur_10:.1f} / 10
-                </p>
-            </div>
-            <div class="bc-score" style="color:{bareme['text']};">{score_20:.1f}<br><span>/ 20</span></div>
-        </div>
-        """, unsafe_allow_html=True)
-
-    with col_rec:
-        rec       = report.quality_control.recommandation
-        rec_emoji = {"Oui": "✅", "Non": "❌", "Peut-être": "⚠️"}.get(rec, "❓")
-        rec_color = {"Oui": "#155724", "Non": "#721c24", "Peut-être": "#856404"}.get(rec, "#6c757d")
-        rec_bg    = {"Oui": "#d4edda", "Non": "#f8d7da", "Peut-être": "#fff3cd"}.get(rec, "#f0f2f8")
-        st.markdown(f"""
-        <div class="score-card" style="background:{rec_bg};height:100%;">
-            <div style="font-size:2rem;">{rec_emoji}</div>
-            <div style="font-size:.85rem;font-weight:600;color:{rec_color};margin-top:.4rem;">
-                Recommandation<br><span style="font-size:1.05rem;">{rec}</span>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-
-    with col_ver:
-        verdict_label = report.quality_control.verdict.replace("_", " ").title()
-        verdict_emoji = {"profil vendeur": "🌟", "profil banal": "😐", "profil intermediaire": "🤔"}.get(
-            report.quality_control.verdict.replace("_", " "), "❓"
-        )
-        st.markdown(f"""
-        <div class="score-card" style="background:#f0f2f8;height:100%;">
-            <div style="font-size:2rem;">{verdict_emoji}</div>
-            <div style="font-size:.85rem;font-weight:600;color:#1a1a2e;margin-top:.4rem;">{verdict_label}</div>
-        </div>
-        """, unsafe_allow_html=True)
-
+    scoring = report.scoring
     
+    st.markdown('<div class="section-title">📊 Score Global du CV</div>', unsafe_allow_html=True)
+
+    # Affichage des 3 jauges sur une ligne
+    col1, col2, col3 = st.columns(3)
     
+    with col1:
+        st.plotly_chart(draw_gauge(scoring.note_finale_sur_20, "Note / 20", 20), use_container_width=True)
+        
+    with col2:
+        st.plotly_chart(draw_gauge(scoring.note_finale_sur_10, "Note / 10", 10), use_container_width=True)
+        
+    with col3:
+        st.plotly_chart(draw_gauge(scoring.note_finale_sur_100, "Note / 100", 100), use_container_width=True)
 
-    # Build proportional segments (total span = 20 notes)
-    total_span = 21   # 0-20 inclusive → 21 values
-    active_lo, active_hi = bareme["range"]
+    # Recommandation et Verdict en dessous
+    st.divider()
+    c_rec, c_ver = st.columns(2)
+    
+    with c_rec:
+        rec = report.quality_control.recommandation
+        st.info(f"🎯 **Recommandation :** {rec}\n\n{report.quality_control.justification_recommandation}")
+        
+    with c_ver:
+        verdict = report.quality_control.verdict.replace("_", " ").title()
+        st.success(f"⚖️ **Verdict :** {verdict}\n\n{report.quality_control.justification_verdict}")
 
-    segments_html = ""
-    for lo, hi, label, emoji, color in ALL_LEVELS:
-        span     = hi - lo + 1
-        width_pct = span / total_span * 100
-        is_active = (lo == active_lo)
-        css_class = "bareme-scale-seg active" if is_active else "bareme-scale-seg inactive"
-        range_txt = f"{lo}" if lo == hi else f"{lo}–{hi}"
-        segments_html += (
-            f'<div class="{css_class}" '
-            f'style="width:{width_pct:.1f}%;background:{color};" '
-            f'title="{label} ({range_txt}/20)">'
-            f'{emoji} {range_txt}'
-            f'</div>'
-        )
-
-    st.markdown(
-        f'<div class="bareme-scale">{segments_html}</div>',
-        unsafe_allow_html=True,
-    )
-
-    # Legend table
-    legend_rows = ""
-    for lo, hi, label, emoji, color in ALL_LEVELS:
-        is_active = (lo == active_lo)
-        range_txt = f"{lo}" if lo == hi else f"{lo} à {hi}"
-        weight    = "font-weight:700;" if is_active else ""
-        border    = f"border-left:4px solid {color};padding-left:.5rem;" if is_active else "padding-left:.74rem;"
-        bg        = f"background:rgba(0,0,0,0.04);border-radius:6px;" if is_active else ""
-        # find matching short description
-        desc = next(e["short"] for e in BAREME if e["range"][0] == lo)
-        legend_rows += (
-            f'<tr style="{weight}{bg}">'
-            f'<td style="{border}white-space:nowrap;">{emoji} <strong>{range_txt}/20</strong></td>'
-            f'<td style="padding:0 1rem;white-space:nowrap;">{label}</td>'
-            f'<td style="color:#555;font-size:.88rem;">{desc}</td>'
-            f'</tr>'
-        )
-
-    st.markdown(
-        f"""
-        <table style="width:100%;border-collapse:collapse;font-size:.9rem;margin-bottom:1.2rem;">
-          <thead>
-            <tr style="color:#888;font-size:.78rem;border-bottom:1px solid #e0e0e0;">
-              <th style="padding:.3rem .5rem;text-align:left;">Note</th>
-              <th style="padding:.3rem 1rem;text-align:left;">Appréciation</th>
-              <th style="padding:.3rem;text-align:left;">Description</th>
-            </tr>
-          </thead>
-          <tbody>{legend_rows}</tbody>
-        </table>
-        """,
-        unsafe_allow_html=True,
-    )
-
-    # ── Row 3 : detail by criterion ──
+    # Détail par critère (Optionnel, gardé pour la précision)
     st.markdown('<div class="section-title">📈 Détail par critère</div>', unsafe_allow_html=True)
     cols = st.columns(4)
     for i, detail in enumerate(scoring.details):
         with cols[i]:
-            pct = detail.score_brut * 10
-            st.metric(
-                label=f"{detail.critere}",
-                value=f"{detail.score_brut}/10",
-                delta=f"Pondéré : {detail.score_pondere:.2f}  (×{detail.poids})",
-            )
-            st.progress(pct / 100)
+            st.metric(label=detail.critere, value=f"{detail.score_brut}/10")
+            st.progress(detail.score_brut / 10)
 
-    with st.expander("🔢 Détail du calcul mathématique"):
-        st.code(scoring.calcul_intermediaire)
-        if scoring.validation_mathematique:
-            st.success("✅ Validation mathématique OK")
-        else:
-            st.error("❌ Erreur de calcul détectée")
-        if scoring.erreur_calcul:
-            st.warning(scoring.erreur_calcul)
 
 
 def render_evaluation_table(report: FinalReport):
