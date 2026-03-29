@@ -377,7 +377,7 @@ def render_header():
 
         /* Classe pour le logo qui clignote */
         .blinking-logo {
-            animation: blinker 1s linear infinite; /* Répète l'animation indéfiniment */
+            animation: blinker 1.5s linear infinite; 
             height: 50px;
         }
 
