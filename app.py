@@ -255,6 +255,26 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 
+def render_sidebar():
+    with st.sidebar:
+        st.image("https://img.icons8.com/fluency/96/artificial-intelligence.png", width=72)
+        st.title("⚙️ Configuration")
+
+        api_key = st.text_input(
+            "🔑 Clé API Google Gemini",
+            type="password",
+            value=os.getenv("GOOGLE_API_KEY", ""),
+        )
+
+        model = st.selectbox(
+            "🤖 Modèle Gemini",
+            ["gemini-2.0-flash", "gemini-1.5-pro"],
+            index=0
+        )
+        
+        st.divider()
+        st.caption("v1.0.0 · JEMS Group · Gemini AI")
+        return api_key, model
 
 
 def draw_gauge(score, title, max_val=20):
@@ -446,69 +466,6 @@ def render_header():
     """, unsafe_allow_html=True)
 
 
-def render_sidebar():
-    with st.sidebar:
-        st.image("https://img.icons8.com/fluency/96/artificial-intelligence.png", width=72)
-        st.title("⚙️ Configuration")
-
-        api_key = st.text_input(
-            "🔑 Clé API Google Gemini",
-            type="password",
-            value=os.getenv("GOOGLE_API_KEY", ""),
-            help="Obtenez votre clé sur https://makersuite.google.com/app/apikey",
-        )
-
-        model = st.selectbox(
-            "🤖 Modèle Gemini",
-            ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-pro"],
-            index=0,
-            help="Flash = rapide & économique · Pro = plus précis",
-        )
-
-        st.divider()
-        st.markdown("### 🏗️ Pipeline Multi-Agents")
-        agents = [
-            ("🔍", "ExperienceAnalysisAgent"),
-            ("🎯", "SkillsEducationAgent"),
-            ("✅", "SummaryValidationAgent"),
-            ("📊", "ScoringAgent"),
-            ("🏁", "QualityControlAgent"),
-            ("📋", "TableGeneratorAgent"),
-        ]
-        for icon, name in agents:
-            st.markdown(
-                f'<div class="agent-section">{icon} <strong>{name}</strong></div>',
-                unsafe_allow_html=True,
-            )
-
-        st.divider()
-        st.markdown("### 📏 Pondération des scores")
-        st.markdown("""
-| Critère | Poids |
-|---------|-------|
-| Expériences | **50 %** |
-| Compétences | **20 %** |
-| Formations  | **10 %** |
-| Résumé      | **20 %** |
-        """)
-
-        st.divider()
-        st.markdown("### 🏅 Barème /20")
-        for lo, hi, label, emoji, color in ALL_LEVELS:
-            range_txt = f"{lo}" if lo == hi else f"{lo}–{hi}"
-            st.markdown(
-                f'<div style="display:flex;align-items:center;gap:.5rem;margin:.18rem 0;">'
-                f'<span style="font-size:.8rem;background:{color};color:white;'
-                f'border-radius:4px;padding:.1rem .45rem;font-weight:600;white-space:nowrap;">'
-                f'{range_txt}</span>'
-                f'<span style="font-size:.82rem;">{emoji} {label}</span></div>',
-                unsafe_allow_html=True,
-            )
-
-        st.divider()
-        st.caption("v1.0.0 · LangChain + Gemini · Pydantic Strict")
-
-        return api_key, model
 
 
 # ══════════════════════════════════════════════
