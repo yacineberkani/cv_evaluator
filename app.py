@@ -368,12 +368,25 @@ def reset_evaluation():
 def render_header():
     st.markdown("""
     <style>
+        /* Animation de clignotement */
+        @keyframes blinker {
+            50% {
+                opacity: 0; /* Devient invisible au milieu du cycle */
+            }
+        }
+
+        /* Classe pour le logo qui clignote */
+        .blinking-logo {
+            animation: blinker 1s linear infinite; /* Répète l'animation indéfiniment */
+            height: 50px;
+        }
+
         .header-container {
             display: flex;
             flex-direction: row;
             align-items: center;
             justify-content: center;
-            gap: 10px; /* Espace entre le logo et le texte */
+            gap: 10px;
             margin-bottom: 10px;
         }
         .main-header {
@@ -385,7 +398,7 @@ def render_header():
         <div class="header-container">
             <img src="https://www.jems-group.com/wp-content/uploads/2021/12/Logo.svg" 
                  alt="JEMS Group Logo" 
-                 style="height: 50px;">
+                 class="blinking-logo">
             <img src="https://readme-typing-svg.demolab.com?font=Bungee+Spice&size=40&duration=3000&pause=800&color=FFFFFF&vCenter=true&width=350&lines=CV+Evaluator" 
                  alt="CV Evaluator">
         </div>
