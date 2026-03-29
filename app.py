@@ -277,35 +277,35 @@ def render_sidebar():
         return api_key, model
 
 
+
+
 def draw_gauge(score, title, max_val=20):
-    # Logique des couleurs demandée
+    # Logique de couleur stricte selon votre barème (pour le score sur 20)
+    color = "#4f6ef7" # Bleu par défaut pour les scores /10 et /100
+    
     if max_val == 20:
-        if score <= 10: color = "#FF0000"          # Rouge
-        elif score <= 12: color = "#FF4500"        # Rouge-Orange
-        elif score <= 14: color = "#FFA500"        # Orange
-        elif score <= 16: color = "#90EE90"        # Vert clair
-        elif score == 17: color = "#228B22"        # Vert
-        elif score <= 19: color = "#006400"        # Vert foncé
-        else: color = "#004400"                    # Vert extrême
-    elif max_val == 10:
-        color = "#4f6ef7" # Couleur par défaut pour les sous-scores
-    else:
-        color = "#764ba2"
+        if score <= 10: color = "#FF0000"           # Rouge (Inexploitable)
+        elif score <= 12: color = "#FF4500"         # Rouge-Orange (Très insuffisant)
+        elif score <= 14: color = "#FFA500"         # Orange (Insuffisant)
+        elif score <= 16: color = "#90EE90"         # Vert clair (Correct)
+        elif 16 < score <= 17.4: color = "#228B22"  # Vert (Bon)
+        elif 17.4 < score <= 19.4: color = "#006400" # Vert foncé (Très bon)
+        else: color = "#004400"                     # Vert extrême (Excellent)
 
     fig = go.Figure(go.Indicator(
         mode = "gauge+number",
         value = score,
         domain = {'x': [0, 1], 'y': [0, 1]},
-        title = {'text': title, 'font': {'size': 18}},
+        title = {'text': f"<b>{title}</b>", 'font': {'size': 20}},
         gauge = {
-            'axis': {'range': [0, max_val], 'tickwidth': 1},
+            'axis': {'range': [0, max_val], 'tickwidth': 1, 'tickcolor': "darkblue"},
             'bar': {'color': color},
             'bgcolor': "white",
             'borderwidth': 2,
-            'bordercolor': "#e0e0e0",
+            'bordercolor': "#eeeeee",
         }
     ))
-    fig.update_layout(height=200, margin=dict(l=20, r=20, t=50, b=20))
+    fig.update_layout(height=250, margin=dict(l=30, r=30, t=50, b=20), paper_bgcolor="rgba(0,0,0,0)")
     return fig
 
 # ══════════════════════════════════════════════
@@ -475,40 +475,62 @@ def render_header():
 def render_scores(report: FinalReport):
     scoring = report.scoring
     
-    st.markdown('<div class="section-title">📊 Score Global du CV</div>', unsafe_allow_html=True)
+    # 1. Affichage du calcul intermédiaire (Règle obligatoire)
+    st.markdown('<div class="section-title">📊 Calcul Mathématique & Validation</div>', unsafe_allow_html=True)
+    
+    # Récupération des notes par bloc (supposées sur 10 dans le schéma)
+    # Note : On s'assure que le calcul est affiché explicitement
+    st.code(f"""
+CALCUL INTERMÉDIAIRE :
+(Expériences: {scoring.note_experiences}/10 × 0.50) + 
+(Compétences: {scoring.note_competences}/10 × 0.20) + 
+(Formations: {scoring.note_formations}/10 × 0.10) + 
+(Résumé: {scoring.note_resume}/10 × 0.20)
+= {scoring.note_finale_sur_10}/10
 
-    # Affichage des 3 jauges sur une ligne
+NOTE FINALE :
+{scoring.note_finale_sur_10}/10 × 2 = {scoring.note_finale_sur_20}/20
+    """, language="text")
+
+    # 2. Affichage des Cercles (Gauges)
     col1, col2, col3 = st.columns(3)
     
     with col1:
-        st.plotly_chart(draw_gauge(scoring.note_finale_sur_20, "Note / 20", 20), use_container_width=True)
+        st.plotly_chart(draw_gauge(scoring.note_finale_sur_20, "SCORE FINAL / 20", 20), use_container_width=True)
         
     with col2:
-        st.plotly_chart(draw_gauge(scoring.note_finale_sur_10, "Note / 10", 10), use_container_width=True)
+        st.plotly_chart(draw_gauge(scoring.note_finale_sur_10, "SCORE / 10", 10), use_container_width=True)
         
     with col3:
-        st.plotly_chart(draw_gauge(scoring.note_finale_sur_100, "Note / 100", 100), use_container_width=True)
+        st.plotly_chart(draw_gauge(scoring.note_finale_sur_100, "SCORE / 100", 100), use_container_width=True)
 
-    # Recommandation et Verdict en dessous
+    # 3. Appréciation selon le barème
     st.divider()
-    c_rec, c_ver = st.columns(2)
+    score_20 = scoring.note_finale_sur_20
     
-    with c_rec:
-        rec = report.quality_control.recommandation
-        st.info(f"🎯 **Recommandation :** {rec}\n\n{report.quality_control.justification_recommandation}")
-        
-    with c_ver:
-        verdict = report.quality_control.verdict.replace("_", " ").title()
-        st.success(f"⚖️ **Verdict :** {verdict}\n\n{report.quality_control.justification_verdict}")
+    if score_20 <= 10: 
+        msg = "🚫 **Inexploitable** : DC inutilisable, décrédibilisant."
+        color_box = "red"
+    elif score_20 <= 12: 
+        msg = "❌ **Très insuffisant** : DC incomplet, brouillon, donne une mauvaise image."
+        color_box = "orange"
+    elif score_20 <= 14: 
+        msg = "⚠️ **Insuffisant** : DC exploitable mais faible, non vendeur."
+        color_box = "orange"
+    elif score_20 <= 16: 
+        msg = "📋 **Correct** : DC utilisable mais perfectible."
+        color_box = "green"
+    elif score_20 <= 17.4: 
+        msg = "👍 **Bon** : DC solide, clair, cohérent, peut être transmis."
+        color_box = "green"
+    elif score_20 <= 19.4: 
+        msg = "🌟 **Très bon** : DC percutant, vendeur, bien rédigé."
+        color_box = "green"
+    else: 
+        msg = "🏆 **Excellent** : DC exemplaire, parfaitement aligné."
+        color_box = "green"
 
-    # Détail par critère (Optionnel, gardé pour la précision)
-    st.markdown('<div class="section-title">📈 Détail par critère</div>', unsafe_allow_html=True)
-    cols = st.columns(4)
-    for i, detail in enumerate(scoring.details):
-        with cols[i]:
-            st.metric(label=detail.critere, value=f"{detail.score_brut}/10")
-            st.progress(detail.score_brut / 10)
-
+    st.success(msg) if color_box == "green" else st.error(msg) if color_box == "red" else st.warning(msg)
 
 
 def render_evaluation_table(report: FinalReport):
