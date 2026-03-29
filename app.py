@@ -255,26 +255,37 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 
+
 def render_sidebar():
     with st.sidebar:
-        st.image("https://img.icons8.com/fluency/96/artificial-intelligence.png", width=72)
-        st.title("⚙️ Configuration")
-
+        st.markdown("""
+        <div style="text-align:center;padding:1rem 0 .5rem;">
+            <img src="https://img.icons8.com/fluency/96/artificial-intelligence.png" width="56">
+            <div style="font-size:1.1rem;font-weight:700;color:#1a1a2e;margin-top:.4rem;">Configuration</div>
+        </div>
+        """, unsafe_allow_html=True)
+ 
+        st.divider()
+ 
         api_key = st.text_input(
             "🔑 Clé API Google Gemini",
             type="password",
             value=os.getenv("GOOGLE_API_KEY", ""),
+            help="Obtenez votre clé sur https://makersuite.google.com/app/apikey",
         )
+ 
 
         model = st.selectbox(
             "🤖 Modèle Gemini",
             ["gemini-2.5-flash-lite", "gemini-2.5-flash", "gemini-2.5-pro"],
             index=0
+            help="Flash = rapide & économique · Pro = plus précis",
         )
-        
+ 
         st.divider()
-        st.caption("v1.0.0 · JEMS Group · Gemini AI")
+        st.caption("v1.0.0 · CV Evaluato  · JEMS Group")
         return api_key, model
+
 
 
 
@@ -471,55 +482,220 @@ def render_header():
 # ══════════════════════════════════════════════
 # RESULT RENDERERS
 # ══════════════════════════════════════════════
-
+ 
+def _bareme_color(note_20: float) -> str:
+    """Return the exact hex color for a /20 score per the barème."""
+    n = round(note_20)
+    if n <= 10:  return "#c62828"   # Rouge — Inexploitable
+    if n <= 12:  return "#e53935"   # Rouge-orange — Très insuffisant
+    if n <= 14:  return "#f4511e"   # Orange — Insuffisant
+    if n <= 16:  return "#7cb342"   # Vert clair — Correct
+    if n == 17:  return "#388e3c"   # Vert moyen — Bon
+    if n <= 19:  return "#2e7d32"   # Vert foncé — Très bon
+    return "#1b5e20"                # Vert très foncé — Excellent
+ 
+ 
+def _progress_ring_svg(value: float, max_val: float, label: str, sublabel: str, color: str, size: int = 160) -> str:
+    """
+    Generate an SVG animated progress ring.
+    value   : raw score value
+    max_val : maximum possible value
+    label   : big centred text (the score string)
+    sublabel: small text below (e.g. '/ 20')
+    color   : stroke colour hex
+    """
+    pct        = min(value / max_val, 1.0)
+    radius     = (size - 24) / 2
+    circ       = 2 * 3.14159 * radius
+    dash_val   = pct * circ
+    track_color = "#e8eaf0"
+    cx = cy    = size / 2
+    anim_id    = f"anim_{label.replace('/','').replace(' ','')}"
+ 
+    return f"""
+<svg width="{size}" height="{size}" viewBox="0 0 {size} {size}" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <style>
+      @keyframes {anim_id} {{
+        from {{ stroke-dashoffset: {circ:.2f}; }}
+        to   {{ stroke-dashoffset: {circ - dash_val:.2f}; }}
+      }}
+    </style>
+    <filter id="glow_{anim_id}">
+      <feGaussianBlur stdDeviation="3" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <!-- Track -->
+  <circle cx="{cx}" cy="{cy}" r="{radius}" fill="none"
+          stroke="{track_color}" stroke-width="12"/>
+  <!-- Progress arc -->
+  <circle cx="{cx}" cy="{cy}" r="{radius}" fill="none"
+          stroke="{color}" stroke-width="12"
+          stroke-linecap="round"
+          stroke-dasharray="{circ:.2f}"
+          stroke-dashoffset="{circ:.2f}"
+          transform="rotate(-90 {cx} {cy})"
+          filter="url(#glow_{anim_id})"
+          style="animation:{anim_id} 1.2s ease-out forwards;">
+    <animate attributeName="stroke-dashoffset"
+             from="{circ:.2f}" to="{circ - dash_val:.2f}"
+             dur="1.2s" fill="freeze" calcMode="spline"
+             keyTimes="0;1" keySplines="0.4 0 0.2 1"/>
+  </circle>
+  <!-- Centre label -->
+  <text x="{cx}" y="{cy - 8}" text-anchor="middle" dominant-baseline="middle"
+        font-family="Inter,sans-serif" font-size="28" font-weight="800" fill="{color}">{label}</text>
+  <text x="{cx}" y="{cy + 20}" text-anchor="middle"
+        font-family="Inter,sans-serif" font-size="13" font-weight="500" fill="#9ea3b0">{sublabel}</text>
+</svg>"""
+ 
+ 
 def render_scores(report: FinalReport):
-    scoring = report.scoring
-    
-    # Extraction dynamique des notes depuis les détails pour éviter l'AttributeError
-    # On cherche le score correspondant à chaque critère dans la liste 'details'
-    notes = {d.critere: d.score_brut for d in scoring.details}
-    
-    # Mapping des noms (ajustez les noms "Expériences", etc., s'ils sont différents dans votre prompt système)
-    n_exp = notes.get("Expériences", 0)
-    n_comp = notes.get("Compétences", 0)
-    n_form = notes.get("Formations", 0)
-    n_res = notes.get("Résumé", 0)
-
-    st.markdown('<div class="section-title">📊 Calcul Mathématique & Validation</div>', unsafe_allow_html=True)
-    
-    # Affichage du calcul intermédiaire REQUIS
-    st.code(f"""
-CALCUL INTERMÉDIAIRE (Sur 10) :
-(Expériences: {n_exp}/10 × 0.50) = {n_exp * 0.5:.2f}
-(Compétences: {n_comp}/10 × 0.20) = {n_comp * 0.2:.2f}
-(Formations: {n_form}/10 × 0.10) = {n_form * 0.1:.2f}
-(Résumé: {n_res}/10 × 0.20) = {n_res * 0.2:.2f}
-
-TOTAL : {scoring.note_finale_sur_10}/10
-NOTE FINALE : {scoring.note_finale_sur_10}/10 × 2 = {scoring.note_finale_sur_20}/20
-    """, language="text")
-
-    # Affichage des 3 Cercles (Gauges)
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        st.plotly_chart(draw_gauge(scoring.note_finale_sur_20, "NOTE FINALE / 20", 20), use_container_width=True)
-    with col2:
-        st.plotly_chart(draw_gauge(scoring.note_finale_sur_10, "NOTE / 10", 10), use_container_width=True)
-    with col3:
-        # Note: note_finale_sur_100 est souvent note_sur_10 * 10
-        st.plotly_chart(draw_gauge(scoring.note_finale_sur_10 * 10, "NOTE / 100", 100), use_container_width=True)
-
-    # Appréciation dynamique
-    st.divider()
-    s20 = scoring.note_finale_sur_20
-    if s20 <= 10: st.error(f"🚫 **Inexploitable** : DC inutilisable ({s20}/20)")
-    elif s20 <= 12: st.error(f"❌ **Très insuffisant** : DC incomplet ({s20}/20)")
-    elif s20 <= 14: st.warning(f"⚠️ **Insuffisant** : DC non vendeur ({s20}/20)")
-    elif s20 <= 16: st.info(f"📋 **Correct** : DC utilisable ({s20}/20)")
-    elif s20 <= 17: st.success(f"👍 **Bon** : DC solide ({s20}/20)")
-    elif s20 <= 19: st.success(f"🌟 **Très bon** : DC percutant ({s20}/20)")
-    else: st.success(f"🏆 **Excellent** : DC exemplaire ({s20}/20)")
-
+    scoring    = report.scoring
+    score_20   = scoring.note_finale_sur_20
+    score_10   = scoring.note_finale_sur_10
+    score_100  = scoring.note_finale_sur_100
+    bareme     = get_bareme(score_20)
+    ring_color = _bareme_color(score_20)
+ 
+    # ── Section title ──
+    st.markdown('<div class="section-title">📊 Scores</div>', unsafe_allow_html=True)
+ 
+    # ── 3 progress rings ──
+    c10, c20, c100 = st.columns(3)
+ 
+    ring_css = """
+    <style>
+    .ring-wrapper {
+        display:flex; flex-direction:column; align-items:center;
+        padding:1.4rem 1rem 1rem;
+        background:#fff;
+        border-radius:18px;
+        box-shadow:0 2px 16px rgba(0,0,0,.07);
+        border:1px solid #f0f1f5;
+        transition:transform .2s;
+    }
+    .ring-wrapper:hover { transform:translateY(-3px); box-shadow:0 6px 24px rgba(0,0,0,.11); }
+    .ring-title {
+        font-family:'Inter',sans-serif;
+        font-size:.78rem; font-weight:600; letter-spacing:.06em;
+        text-transform:uppercase; color:#9ea3b0; margin-bottom:.6rem;
+    }
+    .ring-badge {
+        margin-top:.8rem;
+        display:inline-block;
+        padding:.28rem .85rem;
+        border-radius:20px;
+        font-size:.82rem; font-weight:700;
+        color:white;
+    }
+    </style>
+    """
+    st.markdown(ring_css, unsafe_allow_html=True)
+ 
+    with c10:
+        svg = _progress_ring_svg(score_10, 10, f"{score_10:.1f}", "/ 10", ring_color)
+        st.markdown(
+            f'<div class="ring-wrapper">'
+            f'<div class="ring-title">Score sur 10</div>'
+            f'{svg}'
+            f'<div class="ring-badge" style="background:{ring_color};">{bareme["emoji"]} {bareme["label"]}</div>'
+            f'</div>',
+            unsafe_allow_html=True,
+        )
+ 
+    with c20:
+        svg = _progress_ring_svg(score_20, 20, f"{score_20:.1f}", "/ 20", ring_color, size=190)
+        st.markdown(
+            f'<div class="ring-wrapper" style="border:2px solid {ring_color}30;">'
+            f'<div class="ring-title" style="color:{ring_color};">⭐ Score sur 20</div>'
+            f'{svg}'
+            f'<div class="ring-badge" style="background:{ring_color};font-size:.9rem;padding:.35rem 1.1rem;">'
+            f'{bareme["emoji"]} {bareme["label"]}</div>'
+            f'</div>',
+            unsafe_allow_html=True,
+        )
+ 
+    with c100:
+        svg = _progress_ring_svg(score_100, 100, f"{score_100:.0f}", "/ 100", ring_color)
+        st.markdown(
+            f'<div class="ring-wrapper">'
+            f'<div class="ring-title">Score sur 100</div>'
+            f'{svg}'
+            f'<div class="ring-badge" style="background:{ring_color};">{bareme["emoji"]} {bareme["label"]}</div>'
+            f'</div>',
+            unsafe_allow_html=True,
+        )
+ 
+    st.markdown("<br>", unsafe_allow_html=True)
+ 
+    # ── Recommandation + Verdict row ──
+    col_rec, col_ver = st.columns(2)
+ 
+    with col_rec:
+        rec       = report.quality_control.recommandation
+        rec_emoji = {"Oui": "✅", "Non": "❌", "Peut-être": "⚠️"}.get(rec, "❓")
+        rec_color = {"Oui": "#155724", "Non": "#721c24", "Peut-être": "#856404"}.get(rec, "#6c757d")
+        rec_bg    = {"Oui": "#d4edda", "Non": "#f8d7da", "Peut-être": "#fff3cd"}.get(rec, "#f0f2f8")
+        st.markdown(f"""
+        <div style="display:flex;align-items:center;gap:1rem;padding:1.1rem 1.4rem;
+                    background:{rec_bg};border-radius:12px;border:1px solid {rec_color}30;">
+            <span style="font-size:2rem;">{rec_emoji}</span>
+            <div>
+                <div style="font-size:.72rem;font-weight:600;text-transform:uppercase;
+                            letter-spacing:.06em;color:{rec_color};opacity:.7;">Recommandation</div>
+                <div style="font-size:1.2rem;font-weight:800;color:{rec_color};">{rec}</div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+ 
+    with col_ver:
+        verdict_label = report.quality_control.verdict.replace("_", " ").title()
+        verdict_emoji = {"profil vendeur": "🌟", "profil banal": "😐", "profil intermediaire": "🤔"}.get(
+            report.quality_control.verdict.replace("_", " "), "❓"
+        )
+        st.markdown(f"""
+        <div style="display:flex;align-items:center;gap:1rem;padding:1.1rem 1.4rem;
+                    background:#f5f6fa;border-radius:12px;border:1px solid #e0e2ea;">
+            <span style="font-size:2rem;">{verdict_emoji}</span>
+            <div>
+                <div style="font-size:.72rem;font-weight:600;text-transform:uppercase;
+                            letter-spacing:.06em;color:#888;">Verdict</div>
+                <div style="font-size:1.2rem;font-weight:800;color:#1a1a2e;">{verdict_label}</div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+ 
+    st.markdown("<br>", unsafe_allow_html=True)
+ 
+    # ── Detail by criterion ──
+    st.markdown('<div class="section-title">📈 Détail par critère</div>', unsafe_allow_html=True)
+    cols = st.columns(4)
+    for i, detail in enumerate(scoring.details):
+        with cols[i]:
+            pct = detail.score_brut * 10
+            bar_color = _bareme_color(detail.score_brut * 2)   # map /10 → /20 scale for colour
+            st.metric(
+                label=f"{detail.critere}",
+                value=f"{detail.score_brut}/10",
+                delta=f"Pondéré : {detail.score_pondere:.2f}  (×{detail.poids})",
+            )
+            st.markdown(
+                f'<div style="height:6px;border-radius:4px;background:#e8eaf0;overflow:hidden;">'
+                f'<div style="width:{pct}%;height:100%;background:{bar_color};'
+                f'border-radius:4px;transition:width 1s ease;"></div></div><br>',
+                unsafe_allow_html=True,
+            )
+ 
+    with st.expander("🔢 Détail du calcul mathématique"):
+        st.code(scoring.calcul_intermediaire)
+        if scoring.validation_mathematique:
+            st.success("✅ Validation mathématique OK")
+        else:
+            st.error("❌ Erreur de calcul détectée")
+        if scoring.erreur_calcul:
+            st.warning(scoring.erreur_calcul)
 
 
 def render_evaluation_table(report: FinalReport):
