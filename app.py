@@ -278,7 +278,7 @@ def render_sidebar():
         model = st.selectbox(
             "🤖 Modèle Gemini",
             ["gemini-2.5-flash-lite", "gemini-2.5-flash", "gemini-2.5-pro"],
-            index=0
+            index=0,
             help="Flash = rapide & économique · Pro = plus précis",
         )
  
