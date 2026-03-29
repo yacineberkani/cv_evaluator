@@ -1,3 +1,4 @@
+
 """
 CV Evaluator - Multi-Agent Streamlit Application
 Main entry point for the CV evaluation system.
@@ -10,7 +11,7 @@ import sys
 import logging
 from datetime import datetime
 from dotenv import load_dotenv
-import plotly.graph_objects as go
+
 # ── Setup ──
 load_dotenv()
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
@@ -25,7 +26,7 @@ from models.schemas import FinalReport
 # ── Page config ──
 st.set_page_config(
     page_title="CV Evaluator - JEMS Group",
-    page_icon="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABwAAAAcCAMAAABF0y+mAAAAulBMVEUAAAD9sxr+YXP/bmP6eFj/Tob/vBFHcEz/iUf+YXL/UoL/tRn/VX7+shv/ToX/pSn/uBb/vRD/sB7/XnT/ljr+mjX+vRH/////TYf/vRD/U4H/WHz/jj//XXX/oiz/qyL/gkn/mzT/fVP/aGj/Ym//tBn/cGP/ljn/d1v/TXb/4+H/hYj/cUz/V2j/qgj/4sH/0tT/qrT/xr//vqn/z5r/maX/j23/rJn/Xkr/8/D/jiP/w2X+fBr/wEkOWfK9AAAAF3RSTlMBL17fFObgAP42wLzzVoXlfPH5f9SEgb0o5TAAAAGFSURBVCiRZdLpkoIwDADgckbAa92j4IkIrhyiiPfq+7/WJi0o6/KD6eSbtJkkjIkPAKx322i3DbtrAbDmB6BqYTgZjYZD13UNtcEAurZcLMJJra6hPxSsYLX8q64FtfmB0PC/gj5u+cFqRanhE11xM3wQBtnx5WIDETrzb1S/5DwVGsexVBUY9KZCOee7c5qu18X2IBVTlRnh+Ii4PXFepHgYVTWx/kxoSZkJ58kBD4VM7TInmk2n8+sGY+WF80uBhyQWRdnMjEivGOIn+lEmj0XJBnvzIrqYQvQuT8UPERWR9IdCVDE/i3SZykwPNd9T6IZvJudEVES9MJjzwMtth0VlO6p7TZ2yWR/Ry6nYzXVcnrKMytoK7DKF0CPcYy98HIFEVIuBWaNsY5AlhNjkNva2Q3jHxLzSY5KkND2VxiJSvXsum0y5GU1Po0UCXaDsBT0byMlXa6TUOq0upqWpl6jSqKnWczl1s3lxy9fkAtWb2zGf2lJfdp6B8uWYg0HP+VSgtl/wnEmGER38dAAAAABJRU5ErkJggg==",
+    page_icon="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABwAAAAcCAMAAABF0y+mAAAAulBMVEUAAAD9sxr+YXP/bmP6eFj/Tob/vBFHcEz/iUf+YXL/UoL/tRn/VX7+shv/ToX/pSn/uBb/vRD/sB7/XnT/ljr+mjX+vRH/////TYf/vRD/U4H/WHz/jj//XXX/oiz/qyL/gkn/mzT/fVP/aGj/Ym//tBn/cGP/ljn/d1v/TXb/4+H/hYj/cUz/V2j/qgj/4sH/0tT/qrT/xr//vqn/z5r/maX/j23/rJn/Xkr/8/D/jiP/w2X+fBr/wEkOWfK9AAAAF3RSTlMBL17fFObgAP42wLzzVoXlfPH5f9SEgb0o5TAAAAGFSURBVCiRZdLpkoIwDADgckbAa92j4IkIrhyiiPfq+7/WJi0o6/KD6eSbtJkkjIkPAKx322i3DbtrAbDmB6BqYTgZjYZD13UNtcEAurZcLMJJra6hPxSsYLX8q64FtfmB0PC/gj5u+cFqRarhE11xM3wQBtnx5WIDETrzb1S/5DwVGsexVBUY9KZCOee7c5qu18X2IBVTlRnh+Ii4PXFepHgYVTWx/kxoSZkJ58kBD4VM7TInmk2n8+sGY+WF80uBhyQWRdnMjEivGOIn+lEmj0XJBnvzIrqYQvQuT8UPERWR9IdCVDE/i3SZykwPNd9T6IZvJudEVES9MJjzwMtth0VlO6p7TZ2yWR/Ry6nYzXVcnrKMytoK7DKF0CPcYy98HIFEVIuBWaNsY5AlhNjkNva2Q3jHxLzSY5KkND2VxiJSvXsum0y5GU1Po0UCXaDsBT0byMlXa6TUOq0upqWpl6jSqKnWczl1s3lxy9fkAtWb2zGf2lJfdp6B8uWYg0HP+VSgtl/wnEmGER38dAAAAABJRU5ErkJggg==",
     layout="wide",
     initial_sidebar_state="expanded",
 )
@@ -255,70 +256,6 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 
-
-def render_sidebar():
-    with st.sidebar:
-        st.markdown("""
-        <div style="text-align:center;padding:1rem 0 .5rem;">
-            <img src="https://img.icons8.com/fluency/96/artificial-intelligence.png" width="56">
-            <div style="font-size:1.1rem;font-weight:700;color:#1a1a2e;margin-top:.4rem;">Configuration</div>
-        </div>
-        """, unsafe_allow_html=True)
- 
-        st.divider()
- 
-        api_key = st.text_input(
-            "🔑 Clé API Google Gemini",
-            type="password",
-            value=os.getenv("GOOGLE_API_KEY", ""),
-            help="Obtenez votre clé sur https://makersuite.google.com/app/apikey",
-        )
- 
-
-        model = st.selectbox(
-            "🤖 Modèle Gemini",
-            ["gemini-2.5-flash-lite", "gemini-2.5-flash", "gemini-2.5-pro"],
-            index=0,
-            help="Flash = rapide & économique · Pro = plus précis",
-        )
- 
-        st.divider()
-        st.caption("v1.0.0 · CV Evaluato  · JEMS Group")
-        return api_key, model
-
-
-
-
-
-def draw_gauge(score, title, max_val=20):
-    # Logique de couleur stricte selon votre barème (pour le score sur 20)
-    color = "#4f6ef7" # Bleu par défaut pour les scores /10 et /100
-    
-    if max_val == 20:
-        if score <= 10: color = "#FF0000"           # Rouge (Inexploitable)
-        elif score <= 12: color = "#FF4500"         # Rouge-Orange (Très insuffisant)
-        elif score <= 14: color = "#FFA500"         # Orange (Insuffisant)
-        elif score <= 16: color = "#90EE90"         # Vert clair (Correct)
-        elif 16 < score <= 17.4: color = "#228B22"  # Vert (Bon)
-        elif 17.4 < score <= 19.4: color = "#006400" # Vert foncé (Très bon)
-        else: color = "#004400"                     # Vert extrême (Excellent)
-
-    fig = go.Figure(go.Indicator(
-        mode = "gauge+number",
-        value = score,
-        domain = {'x': [0, 1], 'y': [0, 1]},
-        title = {'text': f"<b>{title}</b>", 'font': {'size': 20}},
-        gauge = {
-            'axis': {'range': [0, max_val], 'tickwidth': 1, 'tickcolor': "darkblue"},
-            'bar': {'color': color},
-            'bgcolor': "white",
-            'borderwidth': 2,
-            'bordercolor': "#eeeeee",
-        }
-    ))
-    fig.update_layout(height=250, margin=dict(l=30, r=30, t=50, b=20), paper_bgcolor="rgba(0,0,0,0)")
-    return fig
-
 # ══════════════════════════════════════════════
 # HELPERS
 # ══════════════════════════════════════════════
@@ -362,11 +299,11 @@ BAREME = [
     {
         "range": (15, 16),
         "label": "Correct",
-        "short": "DC utilisable mais perfectible.",
+        "short": "DC utilisable mais perfectible, profil crédible mais banal.",
         "emoji": "📋",
         "gradient": "linear-gradient(135deg,#e65100,#fb8c00)",
         "text": "#fff3e0",
-        "bar_color": "#01ff1a",
+        "bar_color": "#fb8c00",
     },
     {
         "range": (17, 17),
@@ -375,7 +312,7 @@ BAREME = [
         "emoji": "👍",
         "gradient": "linear-gradient(135deg,#1565c0,#1e88e5)",
         "text": "#e3f2fd",
-        "bar_color": "#3cff00",
+        "bar_color": "#1e88e5",
     },
     {
         "range": (18, 19),
@@ -384,7 +321,7 @@ BAREME = [
         "emoji": "🌟",
         "gradient": "linear-gradient(135deg,#1b5e20,#2e7d32)",
         "text": "#e8f5e9",
-        "bar_color": "#00ff0d",
+        "bar_color": "#43a047",
     },
     {
         "range": (20, 20),
@@ -393,7 +330,7 @@ BAREME = [
         "emoji": "🏆",
         "gradient": "linear-gradient(135deg,#4a148c,#7b1fa2)",
         "text": "#f3e5f5",
-        "bar_color": "#48aa24",
+        "bar_color": "#8e24aa",
     },
 ]
 
@@ -477,12 +414,41 @@ def render_header():
     """, unsafe_allow_html=True)
 
 
+def render_sidebar():
+    with st.sidebar:
+        st.markdown("""
+        <div style="text-align:center;padding:1rem 0 .5rem;">
+            <img src="https://img.icons8.com/fluency/96/artificial-intelligence.png" width="56">
+            <div style="font-size:1.1rem;font-weight:700;color:#1a1a2e;margin-top:.4rem;">Configuration</div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        st.divider()
+
+        api_key = st.text_input(
+            "🔑 Clé API Google Gemini",
+            type="password",
+            value=os.getenv("GOOGLE_API_KEY", ""),
+            help="Obtenez votre clé sur https://makersuite.google.com/app/apikey",
+        )
+
+        model = st.selectbox(
+            "🤖 Modèle Gemini",
+            ["gemini-2.5-flash-lite", "gemini-2.5-flash", "gemini-2.5-pro"],
+            index=0,
+            help="Flash = rapide & économique · Pro = plus précis",
+        )
+
+        st.divider()
+        st.caption("v1.0.0 · LangChain + Gemini · Pydantic Strict")
+
+        return api_key, model
 
 
 # ══════════════════════════════════════════════
 # RESULT RENDERERS
 # ══════════════════════════════════════════════
- 
+
 def _bareme_color(note_20: float) -> str:
     """Return the exact hex color for a /20 score per the barème."""
     n = round(note_20)
@@ -493,8 +459,8 @@ def _bareme_color(note_20: float) -> str:
     if n == 17:  return "#388e3c"   # Vert moyen — Bon
     if n <= 19:  return "#2e7d32"   # Vert foncé — Très bon
     return "#1b5e20"                # Vert très foncé — Excellent
- 
- 
+
+
 def _progress_ring_svg(value: float, max_val: float, label: str, sublabel: str, color: str, size: int = 160) -> str:
     """
     Generate an SVG animated progress ring.
@@ -511,7 +477,7 @@ def _progress_ring_svg(value: float, max_val: float, label: str, sublabel: str, 
     track_color = "#e8eaf0"
     cx = cy    = size / 2
     anim_id    = f"anim_{label.replace('/','').replace(' ','')}"
- 
+
     return f"""
 <svg width="{size}" height="{size}" viewBox="0 0 {size} {size}" xmlns="http://www.w3.org/2000/svg">
   <defs>
@@ -549,8 +515,8 @@ def _progress_ring_svg(value: float, max_val: float, label: str, sublabel: str, 
   <text x="{cx}" y="{cy + 20}" text-anchor="middle"
         font-family="Inter,sans-serif" font-size="13" font-weight="500" fill="#9ea3b0">{sublabel}</text>
 </svg>"""
- 
- 
+
+
 def render_scores(report: FinalReport):
     scoring    = report.scoring
     score_20   = scoring.note_finale_sur_20
@@ -558,13 +524,13 @@ def render_scores(report: FinalReport):
     score_100  = scoring.note_finale_sur_100
     bareme     = get_bareme(score_20)
     ring_color = _bareme_color(score_20)
- 
+
     # ── Section title ──
     st.markdown('<div class="section-title">📊 Scores</div>', unsafe_allow_html=True)
- 
+
     # ── 3 progress rings ──
     c10, c20, c100 = st.columns(3)
- 
+
     ring_css = """
     <style>
     .ring-wrapper {
@@ -593,7 +559,7 @@ def render_scores(report: FinalReport):
     </style>
     """
     st.markdown(ring_css, unsafe_allow_html=True)
- 
+
     with c10:
         svg = _progress_ring_svg(score_10, 10, f"{score_10:.1f}", "/ 10", ring_color)
         st.markdown(
@@ -604,7 +570,7 @@ def render_scores(report: FinalReport):
             f'</div>',
             unsafe_allow_html=True,
         )
- 
+
     with c20:
         svg = _progress_ring_svg(score_20, 20, f"{score_20:.1f}", "/ 20", ring_color, size=190)
         st.markdown(
@@ -616,7 +582,7 @@ def render_scores(report: FinalReport):
             f'</div>',
             unsafe_allow_html=True,
         )
- 
+
     with c100:
         svg = _progress_ring_svg(score_100, 100, f"{score_100:.0f}", "/ 100", ring_color)
         st.markdown(
@@ -627,12 +593,12 @@ def render_scores(report: FinalReport):
             f'</div>',
             unsafe_allow_html=True,
         )
- 
+
     st.markdown("<br>", unsafe_allow_html=True)
- 
+
     # ── Recommandation + Verdict row ──
     col_rec, col_ver = st.columns(2)
- 
+
     with col_rec:
         rec       = report.quality_control.recommandation
         rec_emoji = {"Oui": "✅", "Non": "❌", "Peut-être": "⚠️"}.get(rec, "❓")
@@ -649,7 +615,7 @@ def render_scores(report: FinalReport):
             </div>
         </div>
         """, unsafe_allow_html=True)
- 
+
     with col_ver:
         verdict_label = report.quality_control.verdict.replace("_", " ").title()
         verdict_emoji = {"profil vendeur": "🌟", "profil banal": "😐", "profil intermediaire": "🤔"}.get(
@@ -666,9 +632,9 @@ def render_scores(report: FinalReport):
             </div>
         </div>
         """, unsafe_allow_html=True)
- 
+
     st.markdown("<br>", unsafe_allow_html=True)
- 
+
     # ── Detail by criterion ──
     st.markdown('<div class="section-title">📈 Détail par critère</div>', unsafe_allow_html=True)
     cols = st.columns(4)
@@ -687,7 +653,7 @@ def render_scores(report: FinalReport):
                 f'border-radius:4px;transition:width 1s ease;"></div></div><br>',
                 unsafe_allow_html=True,
             )
- 
+
     with st.expander("🔢 Détail du calcul mathématique"):
         st.code(scoring.calcul_intermediaire)
         if scoring.validation_mathematique:
@@ -1087,3 +1053,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
