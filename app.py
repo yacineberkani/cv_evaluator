@@ -367,16 +367,28 @@ def reset_evaluation():
 
 def render_header():
     st.markdown("""
+    <style>
+        .header-container {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            justify-content: center;
+            gap: 10px; /* Espace entre le logo et le texte */
+            margin-bottom: 10px;
+        }
+        .main-header {
+            text-align: center;
+        }
+    </style>
+    
     <div class="main-header">
-<h1>
-  <img src="https://www.jems-group.com/wp-content/uploads/2021/12/Logo.svg"
-       alt="JEMS Group Logo"
-       style="height: 1.5em; vertical-align: middle; margin-right: 0.3em;">
-
-  <img src="https://readme-typing-svg.demolab.com?font=Bungee+Spice&size=30&duration=3000&pause=800&color=FFFFFF&vCenter=false&width=250&lines=CV+Evaluator"
-       alt="CV Evaluator"
-       style="vertical-align: middle;">
-</h1>
+        <div class="header-container">
+            <img src="https://www.jems-group.com/wp-content/uploads/2021/12/Logo.svg" 
+                 alt="JEMS Group Logo" 
+                 style="height: 50px;">
+            <img src="https://readme-typing-svg.demolab.com?font=Bungee+Spice&size=40&duration=3000&pause=800&color=FFFFFF&vCenter=true&width=350&lines=CV+Evaluator" 
+                 alt="CV Evaluator">
+        </div>
         <p class="subtitle">Système Multi-Agents d'Évaluation de CV propulsé par Gemini AI</p>
         <div class="badge-row">
             <span class="badge">⚡ 6 agents spécialisés</span>
