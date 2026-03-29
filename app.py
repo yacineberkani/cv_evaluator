@@ -475,62 +475,51 @@ def render_header():
 def render_scores(report: FinalReport):
     scoring = report.scoring
     
-    # 1. Affichage du calcul intermédiaire (Règle obligatoire)
+    # Extraction dynamique des notes depuis les détails pour éviter l'AttributeError
+    # On cherche le score correspondant à chaque critère dans la liste 'details'
+    notes = {d.critere: d.score_brut for d in scoring.details}
+    
+    # Mapping des noms (ajustez les noms "Expériences", etc., s'ils sont différents dans votre prompt système)
+    n_exp = notes.get("Expériences", 0)
+    n_comp = notes.get("Compétences", 0)
+    n_form = notes.get("Formations", 0)
+    n_res = notes.get("Résumé", 0)
+
     st.markdown('<div class="section-title">📊 Calcul Mathématique & Validation</div>', unsafe_allow_html=True)
     
-    # Récupération des notes par bloc (supposées sur 10 dans le schéma)
-    # Note : On s'assure que le calcul est affiché explicitement
+    # Affichage du calcul intermédiaire REQUIS
     st.code(f"""
-CALCUL INTERMÉDIAIRE :
-(Expériences: {scoring.note_experiences}/10 × 0.50) + 
-(Compétences: {scoring.note_competences}/10 × 0.20) + 
-(Formations: {scoring.note_formations}/10 × 0.10) + 
-(Résumé: {scoring.note_resume}/10 × 0.20)
-= {scoring.note_finale_sur_10}/10
+CALCUL INTERMÉDIAIRE (Sur 10) :
+(Expériences: {n_exp}/10 × 0.50) = {n_exp * 0.5:.2f}
+(Compétences: {n_comp}/10 × 0.20) = {n_comp * 0.2:.2f}
+(Formations: {n_form}/10 × 0.10) = {n_form * 0.1:.2f}
+(Résumé: {n_res}/10 × 0.20) = {n_res * 0.2:.2f}
 
-NOTE FINALE :
-{scoring.note_finale_sur_10}/10 × 2 = {scoring.note_finale_sur_20}/20
+TOTAL : {scoring.note_finale_sur_10}/10
+NOTE FINALE : {scoring.note_finale_sur_10}/10 × 2 = {scoring.note_finale_sur_20}/20
     """, language="text")
 
-    # 2. Affichage des Cercles (Gauges)
+    # Affichage des 3 Cercles (Gauges)
     col1, col2, col3 = st.columns(3)
-    
     with col1:
-        st.plotly_chart(draw_gauge(scoring.note_finale_sur_20, "SCORE FINAL / 20", 20), use_container_width=True)
-        
+        st.plotly_chart(draw_gauge(scoring.note_finale_sur_20, "NOTE FINALE / 20", 20), use_container_width=True)
     with col2:
-        st.plotly_chart(draw_gauge(scoring.note_finale_sur_10, "SCORE / 10", 10), use_container_width=True)
-        
+        st.plotly_chart(draw_gauge(scoring.note_finale_sur_10, "NOTE / 10", 10), use_container_width=True)
     with col3:
-        st.plotly_chart(draw_gauge(scoring.note_finale_sur_100, "SCORE / 100", 100), use_container_width=True)
+        # Note: note_finale_sur_100 est souvent note_sur_10 * 10
+        st.plotly_chart(draw_gauge(scoring.note_finale_sur_10 * 10, "NOTE / 100", 100), use_container_width=True)
 
-    # 3. Appréciation selon le barème
+    # Appréciation dynamique
     st.divider()
-    score_20 = scoring.note_finale_sur_20
-    
-    if score_20 <= 10: 
-        msg = "🚫 **Inexploitable** : DC inutilisable, décrédibilisant."
-        color_box = "red"
-    elif score_20 <= 12: 
-        msg = "❌ **Très insuffisant** : DC incomplet, brouillon, donne une mauvaise image."
-        color_box = "orange"
-    elif score_20 <= 14: 
-        msg = "⚠️ **Insuffisant** : DC exploitable mais faible, non vendeur."
-        color_box = "orange"
-    elif score_20 <= 16: 
-        msg = "📋 **Correct** : DC utilisable mais perfectible."
-        color_box = "green"
-    elif score_20 <= 17.4: 
-        msg = "👍 **Bon** : DC solide, clair, cohérent, peut être transmis."
-        color_box = "green"
-    elif score_20 <= 19.4: 
-        msg = "🌟 **Très bon** : DC percutant, vendeur, bien rédigé."
-        color_box = "green"
-    else: 
-        msg = "🏆 **Excellent** : DC exemplaire, parfaitement aligné."
-        color_box = "green"
+    s20 = scoring.note_finale_sur_20
+    if s20 <= 10: st.error(f"🚫 **Inexploitable** : DC inutilisable ({s20}/20)")
+    elif s20 <= 12: st.error(f"❌ **Très insuffisant** : DC incomplet ({s20}/20)")
+    elif s20 <= 14: st.warning(f"⚠️ **Insuffisant** : DC non vendeur ({s20}/20)")
+    elif s20 <= 16: st.info(f"📋 **Correct** : DC utilisable ({s20}/20)")
+    elif s20 <= 17: st.success(f"👍 **Bon** : DC solide ({s20}/20)")
+    elif s20 <= 19: st.success(f"🌟 **Très bon** : DC percutant ({s20}/20)")
+    else: st.success(f"🏆 **Excellent** : DC exemplaire ({s20}/20)")
 
-    st.success(msg) if color_box == "green" else st.error(msg) if color_box == "red" else st.warning(msg)
 
 
 def render_evaluation_table(report: FinalReport):
