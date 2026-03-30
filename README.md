@@ -10,54 +10,54 @@ Application d'évaluation automatisée de CV utilisant une architecture **multi-
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                    STREAMLIT FRONTEND                        │
-│         Upload PDF → Affichage Résultats → Export JSON       │
+│                    STREAMLIT FRONTEND                       │
+│         Upload PDF → Affichage Résultats → Export JSON      │
 └──────────────────────┬──────────────────────────────────────┘
                        │
 ┌──────────────────────▼──────────────────────────────────────┐
-│                   ORCHESTRATOR                               │
-│        (Gestion du pipeline, cache, parallélisme)            │
+│                   ORCHESTRATOR                              │
+│        (Gestion du pipeline, cache, parallélisme)           │
 └──────────────────────┬──────────────────────────────────────┘
                        │
     ┌──────────────────┼────────────────────┐
     │                  │                    │
-    ▼                  │                    │
-┌─────────────┐       │                    │
-│  Phase 1    │       │                    │
-│ Experience  │       │                    │
-│ Analysis    │       │                    │
-│ Agent       │       │                    │
-└──────┬──────┘       │                    │
-       │              │                    │
-       ▼              │                    │
-┌──────────────┐ ┌────▼──────────┐         │
-│  Phase 2a    │ │  Phase 2b     │         │
-│  Skills &    │ │  Summary      │  (parallel)
-│  Education   │ │  Validation   │         │
-│  Agent       │ │  Agent        │         │
-└──────┬───────┘ └──────┬────────┘         │
-       │                │                  │
-       └────────┬───────┘                  │
-                ▼                          │
-       ┌─────────────┐                    │
-       │  Phase 3    │                    │
-       │  Scoring    │                    │
-       │  Agent      │                    │
-       └──────┬──────┘                    │
-              │                           │
-              ▼                           │
-    ┌──────────────┐ ┌────────────────┐   │
-    │  Phase 4a    │ │  Phase 4b      │   │
-    │  Quality     │ │  Table         │(parallel)
-    │  Control     │ │  Generator     │   │
-    │  Agent       │ │  Agent         │   │
-    └──────────────┘ └────────────────┘   │
-                                          │
-    ┌─────────────────────────────────────┘
+    │                  │                    │
+┌───▼──────────┐       │                    │ 
+│  Phase 1    │        │                    │
+│ Experience  │        │                    │
+│ Analysis    │        │                    │
+│ Agent       │        │                    │
+└──────┬──────┘        │                    │
+       │               │                    │
+       │               │                    │
+┌──────▼───────┐ ┌─────▼─────────┐          │
+│  Phase 2a    │ │  Phase 2b     │          │
+│  Skills &    │ │  Summary      │     (parallel)
+│  Education   │ │  Validation   │          │
+│  Agent       │ │  Agent        │          │
+└──────┬───────┘ └──────┬────────┘          │
+       │                │                   │
+       └────────┬───────┘                   │
+                ▼                           │
+       ┌─────────────┐                      │
+       │  Phase 3    │                      │
+       │  Scoring    │                      │
+       │  Agent      │                      │
+       └──────┬──────┘                      │
+              │                             │
+              ▼                             │
+    ┌──────────────┐ ┌────────────────┐     │
+    │  Phase 4a    │ │  Phase 4b      │     │
+    │  Quality     │ │  Table         │  (parallel)
+    │  Control     │ │  Generator     │     │
+    │  Agent       │ │  Agent         │     │
+    └──────────────┘ └────────────────┘     │
+                                            │
+    ┌───────────────────────────────────────┘
     ▼
 ┌─────────────────────────────────────────────────────────────┐
-│                    RAPPORT FINAL (JSON)                       │
-│    Score /100 • Tableau • Verdict • Recommandation           │
+│                    RAPPORT FINAL (JSON)                     │
+│    Score /100 • Tableau • Verdict • Recommandation          │
 └─────────────────────────────────────────────────────────────┘
 ```
 
