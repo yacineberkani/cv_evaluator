@@ -440,7 +440,7 @@ def render_sidebar():
         )
 
         st.divider()
-        st.caption("v1.0.0 · LangChain + Gemini · Pydantic Strict")
+        st.caption("v1.0.0 · CV-Evaluator · JEMS GROUP")
 
         return api_key, model
 
