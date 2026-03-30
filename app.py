@@ -26,7 +26,7 @@ from models.schemas import FinalReport
 # ── Page config ──
 st.set_page_config(
     page_title="CV Evaluator - JEMS Group",
-    page_icon="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABwAAAAcCAMAAABF0y+mAAAAulBMVEUAAAD9sxr+YXP/bmP6eFj/Tob/vBFHcEz/iUf+YXL/UoL/tRn/VX7+shv/ToX/pSn/uBb/vRD/sB7/XnT/ljr+mjX+vRH/////TYf/vRD/U4H/WHz/jj//XXX/oiz/qyL/gkn/mzT/fVP/aGj/Ym//tBn/cGP/ljn/d1v/TXb/4+H/hYj/cUz/V2j/qgj/4sH/0tT/qrT/xr//vqn/z5r/maX/j23/rJn/Xkr/8/D/jiP/w2X+fBr/wEkOWfK9AAAAF3RSTlMBL17fFObgAP42wLzzVoXlfPH5f9SEgb0o5TAAAAGFSURBVCiRZdLpkoIwDADgckbAa92j4IkIrhyiiPfq+7/WJi0o6/KD6eSbtJkkjIkPAKx322i3DbtrAbDmB6BqYTgZjYZD13UNtcEAurZcLMJJra6hPxSsYLX8q64FtfmB0PC/gj5u+cFqRarhE11xM3wQBtnx5WIDETrzb1S/5DwVGsexVBUY9KZCOee7c5qu18X2IBVTlRnh+Ii4PXFepHgYVTWx/kxoSZkJ58kBD4VM7TInmk2n8+sGY+WF80uBhyQWRdnMjEivGOIn+lEmj0XJBnvzIrqYQvQuT8UPERWR9IdCVDE/i3SZykwPNd9T6IZvJudEVES9MJjzwMtth0VlO6p7TZ2yWR/Ry6nYzXVcnrKMytoK7DKF0CPcYy98HIFEVIuBWaNsY5AlhNjkNva2Q3jHxLzSY5KkND2VxiJSvXsum0y5GU1Po0UCXaDsBT0byMlXa6TUOq0upqWpl6jSqKnWczl1s3lxy9fkAtWb2zGf2lJfdp6B8uWYg0HP+VSgtl/wnEmGER38dAAAAABJRU5ErkJggg==",
+    page_icon="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABwAAAAcCAMAAABF0y+mAAAAulBMVEUAAAD9sxr+YXP/bmP6eFj/Tob/vBFHcEz/iUf+YXL/UoL/tRn/VX7+shv/ToX/pSn/uBb/vRD/sB7/XnT/ljr+mjX+vRH/////TYf/vRD/U4H/WHz/jj//XXX/oiz/qyL/gkn/mzT/fVP/aGj/Ym//tBn/cGP/ljn/d1v/TXb/4+H/hYj/cUz/V2j/qgj/4sH/0tT/qrT/xr//vqn/z5r/maX/j23/rJn/Xkr/8/D/jiP/w2X+fBr/wEkOWfK9AAAAF3RSTlMBL17fFObgAP42wLzzVoXlfPH5f9SEgb0o5TAAAAGFSURBVCiRZdLpkoIwDADgckbAa92j4IkIrhyiiPfq+7/WJi0o6/KD6eSbtJkkjIkPAKx322i3DbtrAbDmB6BqYTgZjYZD13UNtcEAurZcLMJJra6hPxSsYLX8q64FtfmB0PC/gj5u+cFqRanhE11xM3wQBtnx5WIDETrzb1S/5DwVGsexVBUY9KZCOee7c5qu18X2IBVTlRnh+Ii4PXFepHgYVTWx/kxoSZkJ58kBD4VM7TInmk2n8+sGY+WF80uBhyQWRdnMjEivGOIn+lEmj0XJBnvzIrqYQvQuT8UPERWR9IdCVDE/i3SZykwPNd9T6IZvJudEVES9MJjzwMtth0VlO6p7TZ2yWR/Ry6nYzXVcnrKMytoK7DKF0CPcYy98HIFEVIuBWaNsY5AlhNjkNva2Q3jHxLzSY5KkND2VxiJSvXsum0y5GU1Po0UCXaDsBT0byMlXa6TUOq0upqWpl6jSqKnWczl1s3lxy9fkAtWb2zGf2lJfdp6B8uWYg0HP+VSgtl/wnEmGER38dAAAAABJRU5ErkJggg==",
     layout="wide",
     initial_sidebar_state="expanded",
 )
@@ -440,7 +440,7 @@ def render_sidebar():
         )
 
         st.divider()
-        st.caption("v1.0.0 · CV-Evaluator · JEMS GROUP")
+        st.caption("v1.0.0 · CV-Evaluator © JEMS GROUP")
 
         return api_key, model
 
