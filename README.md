@@ -152,7 +152,7 @@ L'application s'ouvrira sur `http://localhost:8501`.
 | Variable | Description | Défaut |
 |----------|-------------|--------|
 | `GOOGLE_API_KEY` | Clé API Google Gemini | (obligatoire) |
-| `GEMINI_MODEL` | Modèle Gemini à utiliser | `gemini-1.5-flash` |
+| `GEMINI_MODEL` | Modèle Gemini à utiliser | `gemini-2.5-flash-lite` |
 | `GEMINI_TEMPERATURE` | Température (0 = déterministe) | `0` |
 
 ---
