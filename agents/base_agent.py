@@ -1,6 +1,6 @@
 """
 Base agent class for all CV evaluation agents.
-Provides common LangChain + Gemini integration with JSON parsing and retry logic.
+Provides common LangChain + OpenAI integration with JSON parsing and retry logic.
 """
 
 import json
@@ -9,8 +9,8 @@ import os
 import logging
 from typing import Any, Dict, Optional, Type, TypeVar
 from pydantic import BaseModel, ValidationError
-from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain_core.messages import HumanMessage
+from langchain_openai import ChatOpenAI
+from langchain_core.messages import HumanMessage, SystemMessage
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 
 logger = logging.getLogger(__name__)
@@ -31,20 +31,19 @@ class BaseAgent:
     ):
         self.name = name
         self.role = role
-        self.model_name = model_name or os.getenv("GEMINI_MODEL", "gemini-1.5-flash")
+        self.model_name = model_name or os.getenv("OPENAI_MODEL", "gpt-4o-mini")
         self.temperature = temperature
-        self.api_key = api_key or os.getenv("GOOGLE_API_KEY", "")
+        self.api_key = api_key or os.getenv("OPENAI_API_KEY", "")
 
         if not self.api_key:
             raise ValueError(
-                "GOOGLE_API_KEY not found. Set it in .env or pass it directly."
+                "OPENAI_API_KEY not found. Set it in .env or pass it directly."
             )
 
-        self.llm = ChatGoogleGenerativeAI(
+        self.llm = ChatOpenAI(
             model=self.model_name,
-            google_api_key=self.api_key,
+            api_key=self.api_key,
             temperature=self.temperature,
-            convert_system_message_to_human=True,
         )
 
     def _extract_json_from_response(self, text: str) -> str:
@@ -76,8 +75,11 @@ class BaseAgent:
     )
     def _call_llm_with_retry(self, prompt: str, output_model: Type[T]) -> T:
         """Call LLM with retry logic for JSON parsing failures."""
-        logger.info(f"[{self.name}] Calling Gemini...")
+        logger.info(f"[{self.name}] Calling OpenAI...")
 
+        # On peut utiliser SystemMessage pour le rôle, mais ici on garde HumanMessage
+        # pour rester compatible avec les prompts existants (qui étaient conçus pour Gemini).
+        # Si tu préfères utiliser SystemMessage, il faudra ajuster les prompts.
         response = self.llm.invoke([HumanMessage(content=prompt)])
         raw_text = response.content
 
