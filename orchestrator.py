@@ -63,11 +63,18 @@ class CVEvaluationOrchestrator:
     ):
         self.api_key = api_key
         self.model_name = model_name
+        self.provider = detect_provider(model_name)
         self.cache = ResultCache(cache_dir=cache_dir)
         self.progress_callback = progress_callback or (lambda msg, pct: None)
 
-        # Initialize agents
-        agent_kwargs = {"api_key": api_key, "model_name": model_name}
+        logger.info(f"[Orchestrator] Provider detected: '{self.provider}' for model '{model_name}'")
+
+        # ✅ provider is now passed to every agent
+        agent_kwargs = {
+            "api_key": api_key,
+            "model_name": model_name,
+            "provider": self.provider,
+        }
         self.experience_agent = ExperienceAnalysisAgent(**agent_kwargs)
         self.skills_education_agent = SkillsEducationAgent(**agent_kwargs)
         self.summary_validation_agent = SummaryValidationAgent(**agent_kwargs)
