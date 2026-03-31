@@ -403,12 +403,12 @@ def render_header():
             <img src="https://readme-typing-svg.demolab.com?font=Bungee+Spice&size=40&duration=3000&pause=800&color=FFFFFF&vCenter=true&width=350&lines=CV+Evaluator" 
                  alt="CV Evaluator">
         </div>
-        <p class="subtitle">Système Multi-Agents d'Évaluation de CV propulsé par Gemini AI</p>
+        <p class="subtitle">Système Multi-Agents d'Évaluation de CV propulsé par IA GEN</p>
         <div class="badge-row">
             <span class="badge">⚡ 6 agents spécialisés</span>
             <span class="badge">🧠 Analyse déterministe</span>
             <span class="badge">📋 Rapport structuré</span>
-            <span class="badge">🔗 LangChain + Pydantic</span>
+            <span class="badge">🔗 LangChainc</span>
         </div>
     </div>
     """, unsafe_allow_html=True)
@@ -426,14 +426,14 @@ def render_sidebar():
         st.divider()
 
         api_key = st.text_input(
-            "🔑 Clé API Google Gemini",
+            "🔑 Clé API Google Gemini Ou OpenAI",
             type="password",
             value=os.getenv("GOOGLE_API_KEY", ""),
             help="Obtenez votre clé sur https://makersuite.google.com/app/apikey",
         )
 
         model = st.selectbox(
-            "🤖 Modèle Gemini",
+            "🤖 Modèle Gemini & OpenAI",
             ["gemini-2.5-flash-lite", "gemini-2.5-flash", "gemini-2.5-pro","gpt-5", "gpt-5-mini", "gpt-5-nano", "gpt-4o", "gpt-4o-mini", "gpt-4.1", "gpt-4.1-mini", "gpt-4.1-nano", "gpt-4-turbo", "gpt-4", "o1", "o1-mini", "o3", "o3-mini"],
             index=0,
             help="Flash = rapide & économique · Pro = plus précis",
