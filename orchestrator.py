@@ -39,6 +39,18 @@ from utils.cache import ResultCache
 logger = logging.getLogger(__name__)
 
 
+# Models that belong to OpenAI — everything else is treated as Gemini
+GEMINI_MODEL_PREFIXES = ("gemini-2.5-flash-lite", "gemini-2.5-flash", "gemini-2.5-pro")
+
+
+def detect_provider(model_name: str) -> str:
+    """Infer the provider from the model name."""
+    model_lower = model_name.lower()
+    if any(model_lower.startswith(p) for p in GEMINI_MODEL_PREFIXES):
+        return "gemini"
+    return "openai"
+
+
 class CVEvaluationOrchestrator:
     """Orchestrates the multi-agent CV evaluation pipeline."""
 
