@@ -1,33 +1,36 @@
 """
-Intelligent Dynamic Chunking for CV content.
+Découpage dynamique intelligent pour le contenu des CV.
 
-Strategy: Hybrid Section + Token-Aware Chunking
-─────────────────────────────────────────────────
-1. SECTION DETECTION    → regex patterns (FR + EN) to locate semantic boundaries
-2. TOKEN ESTIMATION     → ~4 chars/token heuristic, no external lib required
-3. ADAPTIVE SPLITTING   → sections exceeding token budget are sub-chunked by
-                          paragraph / date-block so the LLM never receives
-                          a truncated mid-sentence wall of text
-4. CONTEXT INJECTION    → every overflow chunk carries a lightweight "header"
-                          summarising what came before (semantic continuity)
-5. FALLBACK GRACEFUL    → if no section is found the full text is split into
-                          overlapping windows with configurable stride
+Stratégie : découpage hybride par section + prise en compte des tokens
+───────────────────────────────────────────────────────────────────────
+1. DÉTECTION DES SECTIONS    → expressions régulières (FR + EN) pour localiser
+                               les limites sémantiques
+2. ESTIMATION DES TOKENS     → heuristique ~4 caractères/token, sans librairie externe
+3. DÉCOUPAGE ADAPTATIF       → les sections qui dépassent le budget de tokens sont
+                               sous-découpées par paragraphe / bloc de dates afin
+                               que le LLM ne reçoive jamais un mur de texte tronqué
+                               en pleine phrase
+4. INJECTION DE CONTEXTE     → chaque fragment de dépassement reçoit un « en‑tête »
+                               léger résumant ce qui précède (continuité sémantique)
+5. SOLUTION DE SECOURS       → si aucune section n’est trouvée, le texte complet
+                               est divisé en fenêtres avec chevauchement paramétrable
 
-Token budget defaults
-─────────────────────
-  MAX_TOKENS_PER_CHUNK  = 3 000   (safe for 4 k-context models)
-  OVERLAP_TOKENS        =   200   (inter-chunk context preservation)
-  CHARS_PER_TOKEN       =     4   (conservative heuristic for French/English)
+Budget de tokens par défaut
+───────────────────────────
+  MAX_TOKENS_PER_CHUNK  = 3 000   (sûr pour les modèles avec contexte 4k)
+  OVERLAP_TOKENS        =   200   (préservation du contexte entre fragments)
+  CHARS_PER_TOKEN       =     4   (heuristique conservative pour le français/anglais)
 
-Backward-compatible API
-────────────────────────
-  chunk_cv_by_sections()  → legacy dict interface (used by current orchestrator)
-  get_section_or_full()   → legacy helper (used by current orchestrator)
+API rétrocompatible
+───────────────────
+  chunk_cv_by_sections()  → interface dict héritée (utilisée par l’orchestrateur actuel)
+  get_section_or_full()   → fonction utilitaire héritée (utilisée par l’orchestrateur actuel)
 
-New API
-───────
-  chunk_cv()                    → returns CVSections dataclass
-  get_best_chunks_for_agent()   → token-budget-aware string for agents
+Nouvelle API
+────────────
+  chunk_cv()                    → renvoie un dataclass CVSections
+  get_best_chunks_for_agent()   → chaîne de caractères adaptée au budget de tokens
+                                  pour l’agent
 """
 
 from __future__ import annotations
