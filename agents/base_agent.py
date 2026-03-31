@@ -1,54 +1,113 @@
 """
 Base agent class for all CV evaluation agents.
-Provides common LangChain + OpenAI integration with JSON parsing and retry logic.
+Supports multiple LLM providers: OpenAI (ChatGPT), Google (Gemini) via LangChain.
 """
 
 import json
 import re
 import os
 import logging
-from typing import Any, Dict, Optional, Type, TypeVar
+from typing import Any, Dict, Optional, Type, TypeVar, Literal
 from pydantic import BaseModel, ValidationError
-from langchain_openai import ChatOpenAI
 from langchain_core.messages import HumanMessage, SystemMessage
+from langchain_core.language_models.chat_models import BaseChatModel
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 
 logger = logging.getLogger(__name__)
 
 T = TypeVar("T", bound=BaseModel)
 
+# Supported provider types
+ProviderType = Literal["gemini", "openai"]
+
+
+def create_llm(
+    provider: ProviderType,
+    model_name: Optional[str],
+    temperature: float,
+    api_key: Optional[str],
+) -> BaseChatModel:
+    """Factory function to instantiate the correct LangChain LLM based on provider."""
+
+    if provider == "gemini":
+        from langchain_google_genai import ChatGoogleGenerativeAI
+
+        resolved_key = api_key or os.getenv("GOOGLE_API_KEY", "")
+        resolved_model = model_name or os.getenv("GEMINI_MODEL", "gemini-1.5-flash")
+
+        if not resolved_key:
+            raise ValueError("GOOGLE_API_KEY not found. Set it in .env or pass it directly.")
+
+        return ChatGoogleGenerativeAI(
+            model=resolved_model,
+            google_api_key=resolved_key,
+            temperature=temperature,
+            convert_system_message_to_human=True,  # Gemini doesn't support SystemMessage natively
+        )
+
+    elif provider == "openai":
+        from langchain_openai import ChatOpenAI
+
+        resolved_key = api_key or os.getenv("OPENAI_API_KEY", "")
+        resolved_model = model_name or os.getenv("OPENAI_MODEL", "gpt-4o-mini")
+
+        if not resolved_key:
+            raise ValueError("OPENAI_API_KEY not found. Set it in .env or pass it directly.")
+
+        return ChatOpenAI(
+            model=resolved_model,
+            openai_api_key=resolved_key,
+            temperature=temperature,
+        )
+
+    else:
+        raise ValueError(f"Unsupported provider: '{provider}'. Choose 'gemini' or 'openai'.")
+
 
 class BaseAgent:
-    """Base class for all CV evaluation agents."""
+    """
+    Base class for all CV evaluation agents.
+    Supports OpenAI (ChatGPT) and Google (Gemini) via LangChain.
+    """
 
     def __init__(
         self,
         name: str,
         role: str,
+        provider: ProviderType = "gemini",
         model_name: Optional[str] = None,
         temperature: float = 0,
         api_key: Optional[str] = None,
     ):
         self.name = name
         self.role = role
-        self.model_name = model_name or os.getenv("OPENAI_MODEL", "gpt-4o-mini")
+        self.provider = provider
+        self.model_name = model_name
         self.temperature = temperature
-        self.api_key = api_key or os.getenv("OPENAI_API_KEY", "")
 
-        if not self.api_key:
-            raise ValueError(
-                "OPENAI_API_KEY not found. Set it in .env or pass it directly."
-            )
-
-        self.llm = ChatOpenAI(
-            model=self.model_name,
-            api_key=self.api_key,
-            temperature=self.temperature,
+        self.llm: BaseChatModel = create_llm(
+            provider=provider,
+            model_name=model_name,
+            temperature=temperature,
+            api_key=api_key,
         )
+
+        logger.info(f"[{self.name}] Initialized with provider='{provider}', model='{self.model_name or 'default'}'")
+
+    def _build_messages(self, prompt: str) -> list:
+        """
+        Build the message list for the LLM.
+        Gemini uses convert_system_message_to_human, so SystemMessage is safe for OpenAI
+        and handled automatically for Gemini.
+        """
+        messages = []
+        if self.role:
+            messages.append(SystemMessage(content=self.role))
+        messages.append(HumanMessage(content=prompt))
+        return messages
 
     def _extract_json_from_response(self, text: str) -> str:
         """Extract JSON from LLM response, handling markdown code blocks."""
-        # Try to find JSON in code blocks
         patterns = [
             r"```json\s*([\s\S]*?)```",
             r"```\s*([\s\S]*?)```",
@@ -64,7 +123,6 @@ class BaseAgent:
                 except json.JSONDecodeError:
                     continue
 
-        # If no pattern worked, try the raw text
         return text.strip()
 
     @retry(
@@ -75,34 +133,28 @@ class BaseAgent:
     )
     def _call_llm_with_retry(self, prompt: str, output_model: Type[T]) -> T:
         """Call LLM with retry logic for JSON parsing failures."""
-        logger.info(f"[{self.name}] Calling OpenAI...")
+        logger.info(f"[{self.name}] Calling {self.provider} LLM...")
 
-        # On peut utiliser SystemMessage pour le rôle, mais ici on garde HumanMessage
-        # pour rester compatible avec les prompts existants (qui étaient conçus pour Gemini).
-        # Si tu préfères utiliser SystemMessage, il faudra ajuster les prompts.
-        response = self.llm.invoke([HumanMessage(content=prompt)])
+        messages = self._build_messages(prompt)
+        response = self.llm.invoke(messages)
         raw_text = response.content
 
         logger.debug(f"[{self.name}] Raw response length: {len(raw_text)}")
 
-        # Extract JSON
         json_str = self._extract_json_from_response(raw_text)
 
-        # Parse JSON
         try:
             data = json.loads(json_str)
         except json.JSONDecodeError as e:
             logger.warning(f"[{self.name}] JSON parse error: {e}. Retrying with fix prompt...")
-            # Retry with a fix prompt
             fix_prompt = (
                 f"Le texte suivant devait être un JSON valide mais contient des erreurs. "
                 f"Corrige-le et renvoie UNIQUEMENT le JSON valide :\n\n{json_str}"
             )
-            response = self.llm.invoke([HumanMessage(content=fix_prompt)])
-            json_str = self._extract_json_from_response(response.content)
+            fix_response = self.llm.invoke([HumanMessage(content=fix_prompt)])
+            json_str = self._extract_json_from_response(fix_response.content)
             data = json.loads(json_str)
 
-        # Validate with Pydantic
         result = output_model.model_validate(data)
         logger.info(f"[{self.name}] Successfully parsed and validated output.")
         return result
