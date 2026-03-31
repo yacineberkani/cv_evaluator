@@ -125,39 +125,62 @@ class BaseAgent:
 
         return text.strip()
 
-    @retry(
-        stop=stop_after_attempt(3),
-        wait=wait_exponential(multiplier=1, min=2, max=10),
-        retry=retry_if_exception_type((json.JSONDecodeError, ValidationError)),
-        reraise=True,
-    )
-    def _call_llm_with_retry(self, prompt: str, output_model: Type[T]) -> T:
-        """Call LLM with retry logic for JSON parsing failures."""
-        logger.info(f"[{self.name}] Calling {self.provider} LLM...")
-
-        messages = self._build_messages(prompt)
-        response = self.llm.invoke(messages)
-        raw_text = response.content
-
-        logger.debug(f"[{self.name}] Raw response length: {len(raw_text)}")
-
-        json_str = self._extract_json_from_response(raw_text)
-
-        try:
-            data = json.loads(json_str)
-        except json.JSONDecodeError as e:
-            logger.warning(f"[{self.name}] JSON parse error: {e}. Retrying with fix prompt...")
-            fix_prompt = (
-                f"Le texte suivant devait être un JSON valide mais contient des erreurs. "
-                f"Corrige-le et renvoie UNIQUEMENT le JSON valide :\n\n{json_str}"
-            )
-            fix_response = self.llm.invoke([HumanMessage(content=fix_prompt)])
-            json_str = self._extract_json_from_response(fix_response.content)
-            data = json.loads(json_str)
-
-        result = output_model.model_validate(data)
-        logger.info(f"[{self.name}] Successfully parsed and validated output.")
-        return result
+        @retry(
+            stop=stop_after_attempt(3),
+            wait=wait_exponential(multiplier=1, min=2, max=10),
+            retry=retry_if_exception_type((json.JSONDecodeError, ValidationError)),
+            reraise=True,
+        )
+        def _call_llm_with_retry(self, prompt: str, output_model: Type[T]) -> T:
+            """Call LLM with retry logic for JSON parsing failures."""
+            logger.info(f"[{self.name}] Calling {self.provider} LLM...")
+        
+            messages = self._build_messages(prompt)
+            response = self.llm.invoke(messages)
+            raw_text = response.content
+        
+            logger.debug(f"[{self.name}] Raw response:\n{raw_text}")
+        
+            json_str = self._extract_json_from_response(raw_text)
+        
+            # --- JSON parse ---
+            try:
+                data = json.loads(json_str)
+            except json.JSONDecodeError as e:
+                logger.warning(f"[{self.name}] JSON parse error: {e}. Asking LLM to fix...")
+                fix_prompt = (
+                    f"Le texte suivant devait être un JSON valide mais contient des erreurs. "
+                    f"Corrige-le et renvoie UNIQUEMENT le JSON valide :\n\n{json_str}"
+                )
+                fix_response = self.llm.invoke([HumanMessage(content=fix_prompt)])
+                json_str = self._extract_json_from_response(fix_response.content)
+                data = json.loads(json_str)  # raises → retry
+        
+            # --- Pydantic validation ---
+            try:
+                result = output_model.model_validate(data)
+            except ValidationError as e:
+                # Log exactly which fields are wrong
+                logger.warning(
+                    f"[{self.name}] Pydantic ValidationError:\n{e}\n"
+                    f"Data received:\n{json.dumps(data, indent=2, ensure_ascii=False)}"
+                )
+                # Send schema + errors back to LLM for self-correction
+                schema = json.dumps(output_model.model_json_schema(), indent=2, ensure_ascii=False)
+                fix_prompt = (
+                    f"Le JSON suivant ne respecte pas le schéma attendu.\n\n"
+                    f"SCHÉMA:\n{schema}\n\n"
+                    f"JSON REÇU:\n{json.dumps(data, indent=2, ensure_ascii=False)}\n\n"
+                    f"ERREURS DE VALIDATION:\n{str(e)}\n\n"
+                    f"Renvoie UNIQUEMENT un JSON corrigé qui respecte exactement le schéma."
+                )
+                fix_response = self.llm.invoke([HumanMessage(content=fix_prompt)])
+                json_str = self._extract_json_from_response(fix_response.content)
+                data = json.loads(json_str)
+                result = output_model.model_validate(data)  # raises ValidationError → retry
+        
+            logger.info(f"[{self.name}] Successfully parsed and validated output.")
+            return result
 
     def run(self, **kwargs) -> Any:
         """Override in subclasses."""
