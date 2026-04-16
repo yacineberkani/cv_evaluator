@@ -13,7 +13,7 @@ import json
 import logging
 import time
 from datetime import datetime, timezone
-from typing import Optional, Callable
+from typing import Optional, Callable, Literal
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from models.schemas import (
@@ -38,7 +38,6 @@ from utils.cache import ResultCache
 
 logger = logging.getLogger(__name__)
 
-
 # Models that belong to OpenAI — everything else is treated as Gemini
 GEMINI_MODEL_PREFIXES = ("gemini-2.5-flash-lite", "gemini-2.5-flash", "gemini-2.5-pro")
 
@@ -60,18 +59,28 @@ class CVEvaluationOrchestrator:
         model_name: str = "gemini-1.5-flash",
         cache_dir: Optional[str] = None,
         progress_callback: Optional[Callable[[str, float], None]] = None,
+        provider: Optional[Literal["gemini", "openai", "ollama"]] = None,  # <-- NOUVEAU PARAMÈTRE
     ):
         self.api_key = api_key
         self.model_name = model_name
-        self.provider = detect_provider(model_name)
+        
+        # Détermination du provider
+        if provider is not None:
+            self.provider = provider
+        else:
+            self.provider = detect_provider(model_name)
+        
+        # Pour Ollama, on n'a pas besoin de clé API (on la passe à None)
+        effective_api_key = None if self.provider == "ollama" else api_key
+        
         self.cache = ResultCache(cache_dir=cache_dir)
         self.progress_callback = progress_callback or (lambda msg, pct: None)
 
-        logger.info(f"[Orchestrator] Provider detected: '{self.provider}' for model '{model_name}'")
+        logger.info(f"[Orchestrator] Provider: '{self.provider}' for model '{model_name}'")
 
-        # ✅ provider is now passed to every agent
+        # ✅ provider est passé à chaque agent
         agent_kwargs = {
-            "api_key": api_key,
+            "api_key": effective_api_key,  # <-- None pour Ollama
             "model_name": model_name,
             "provider": self.provider,
         }
