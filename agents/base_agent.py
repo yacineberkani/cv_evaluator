@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 T = TypeVar("T", bound=BaseModel)
 
-# Supported provider types (Ollama added)
+# Supported provider types (Ollama ajouté)
 ProviderType = Literal["gemini", "openai", "ollama"]
 
 
@@ -42,7 +42,7 @@ def create_llm(
             model=resolved_model,
             google_api_key=resolved_key,
             temperature=temperature,
-            convert_system_message_to_human=True,  # Gemini doesn't support SystemMessage natively
+            convert_system_message_to_human=True,
         )
 
     elif provider == "openai":
@@ -61,7 +61,7 @@ def create_llm(
         )
 
     elif provider == "ollama":
-        # Support for free local Ollama
+        # Support gratuit via Ollama (local ou cloud)
         try:
             from langchain_ollama import ChatOllama
         except ImportError:
@@ -70,17 +70,15 @@ def create_llm(
                 "Install it with: pip install langchain-ollama"
             )
 
-        resolved_model = model_name or os.getenv("OLLAMA_MODEL", "llama3.2")  # default model
-        base_url = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
+        resolved_model = model_name or os.getenv("OLLAMA_MODEL", "gemini-3-flash-preview:cloud")
 
-        logger.info(f"Using Ollama with model={resolved_model}, base_url={base_url}")
-
+        # Pas de base_url explicite : utilise la valeur par défaut (localhost:11434)
+        # Si vous voulez un serveur distant, définissez la variable d'environnement OLLAMA_HOST
+        # ex: OLLAMA_HOST=http://mon-cloud-ollama:11434
         return ChatOllama(
             model=resolved_model,
-            base_url=base_url,
             temperature=temperature,
-            # Optionally add other Ollama parameters (num_ctx, num_predict, etc.)
-            # num_ctx=4096,
+            # Aucun paramètre base_url ici
         )
 
     else:
