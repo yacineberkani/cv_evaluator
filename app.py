@@ -443,7 +443,7 @@ def render_sidebar():
             # Sélection du modèle (vous pouvez ajuster la liste)
             model = st.selectbox(
                 "🤖 Modèle Ollama",
-                ["llama3.2", "llama3.1", "mistral", "phi3", "gemma2"],
+                ["gemini-3-flash-preview:cloud", "gpt-oss:120b-cloud", "deepseek-v3.1:671b-cloud"],
                 index=0,
                 help="Modèle à utiliser avec Ollama",
             )
