@@ -10,3 +10,5 @@ pymupdf>=1.23.0
 tenacity>=9.1.4
 python-dotenv>=1.0.0
 tenacity>=8.2.0
+langchain-ollama
+httpx
