@@ -425,18 +425,29 @@ def render_sidebar():
         # ── Bouton mode gratuit Ollama ──
         if st.button("🔓 Utilisation gratuite (Ollama)", use_container_width=True):
             st.session_state.use_ollama = not st.session_state.get("use_ollama", False)
-            reset_evaluation()  # Réinitialise les résultats en changeant de mode
+            reset_evaluation()  # réinitialise les résultats
             st.rerun()
 
         if st.session_state.get("use_ollama", False):
-            st.success("✅ Mode gratuit activé – Ollama (modèle: llama3.2)")
-            st.info("Aucune clé API requise. Assurez-vous qu'Ollama est installé et lancé (ou utilisez le cloud).")
-            # Désactiver la sélection de modèle et la clé API
-            api_key = None
-            model = "llama3.2"
-            # Afficher un selectbox désactivé pour l'information
-            st.selectbox("🤖 Modèle (fixe en mode gratuit)", ["llama3.2"], disabled=True)
-            # Indicateur pour le mode
+            st.success("✅ Mode gratuit activé – Ollama")
+            st.info("Utilisation locale (sans clé) ou cloud (avec clé Bearer).")
+
+            # Champ pour la clé API Ollama Cloud (optionnelle)
+            ollama_api_key = st.text_input(
+                "🔑 Clé API Ollama Cloud (optionnelle)",
+                type="password",
+                value=os.getenv("OLLAMA_API_KEY", ""),
+                help="Laissez vide pour utiliser le serveur local (http://localhost:11434). "
+                     "Renseignez votre token Bearer pour utiliser https://ollama.com",
+            )
+            # Sélection du modèle (vous pouvez ajuster la liste)
+            model = st.selectbox(
+                "🤖 Modèle Ollama",
+                ["llama3.2", "llama3.1", "mistral", "phi3", "gemma2"],
+                index=0,
+                help="Modèle à utiliser avec Ollama",
+            )
+            api_key = ollama_api_key  # sera None si vide
             provider = "ollama"
         else:
             st.divider()
