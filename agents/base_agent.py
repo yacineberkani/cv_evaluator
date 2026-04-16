@@ -17,8 +17,8 @@ logger = logging.getLogger(__name__)
 
 T = TypeVar("T", bound=BaseModel)
 
-# Supported provider types
-ProviderType = Literal["gemini", "openai"]
+# Supported provider types (Ollama added)
+ProviderType = Literal["gemini", "openai", "ollama"]
 
 
 def create_llm(
@@ -60,8 +60,31 @@ def create_llm(
             temperature=temperature,
         )
 
+    elif provider == "ollama":
+        # Support for free local Ollama
+        try:
+            from langchain_ollama import ChatOllama
+        except ImportError:
+            raise ImportError(
+                "langchain-ollama is required for Ollama support. "
+                "Install it with: pip install langchain-ollama"
+            )
+
+        resolved_model = model_name or os.getenv("OLLAMA_MODEL", "llama3.2")  # default model
+        base_url = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
+
+        logger.info(f"Using Ollama with model={resolved_model}, base_url={base_url}")
+
+        return ChatOllama(
+            model=resolved_model,
+            base_url=base_url,
+            temperature=temperature,
+            # Optionally add other Ollama parameters (num_ctx, num_predict, etc.)
+            # num_ctx=4096,
+        )
+
     else:
-        raise ValueError(f"Unsupported provider: '{provider}'. Choose 'gemini' or 'openai'.")
+        raise ValueError(f"Unsupported provider: '{provider}'. Choose 'gemini', 'openai' or 'ollama'.")
 
 
 class BaseAgent:
