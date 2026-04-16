@@ -1,4 +1,3 @@
-
 """
 CV Evaluator - Multi-Agent Streamlit Application
 Main entry point for the CV evaluation system.
@@ -423,26 +422,42 @@ def render_sidebar():
         </div>
         """, unsafe_allow_html=True)
 
-        st.divider()
+        # ── Bouton mode gratuit Ollama ──
+        if st.button("🔓 Utilisation gratuite (Ollama)", use_container_width=True):
+            st.session_state.use_ollama = not st.session_state.get("use_ollama", False)
+            reset_evaluation()  # Réinitialise les résultats en changeant de mode
+            st.rerun()
 
-        api_key = st.text_input(
-            "🔑 Clé API Google Gemini Ou OpenAI",
-            type="password",
-            value=os.getenv("GOOGLE_API_KEY", ""),
-            help="Obtenez votre clé sur https://makersuite.google.com/app/apikey",
-        )
-
-        model = st.selectbox(
-            "🤖 Modèle Gemini & OpenAI",
-            ["gemini-2.5-flash-lite", "gemini-2.5-flash", "gemini-2.5-pro","gpt-5", "gpt-5-mini", "gpt-5-nano", "gpt-4o", "gpt-4o-mini", "gpt-4.1", "gpt-4.1-mini", "gpt-4.1-nano", "gpt-4-turbo", "gpt-4", "o1", "o1-mini", "o3", "o3-mini"],
-            index=0,
-            help="Flash = rapide & économique · Pro = plus précis",
-        )
+        if st.session_state.get("use_ollama", False):
+            st.success("✅ Mode gratuit activé – Ollama (modèle: llama3.2)")
+            st.info("Aucune clé API requise. Assurez-vous qu'Ollama est installé et lancé (ou utilisez le cloud).")
+            # Désactiver la sélection de modèle et la clé API
+            api_key = None
+            model = "llama3.2"
+            # Afficher un selectbox désactivé pour l'information
+            st.selectbox("🤖 Modèle (fixe en mode gratuit)", ["llama3.2"], disabled=True)
+            # Indicateur pour le mode
+            provider = "ollama"
+        else:
+            st.divider()
+            api_key = st.text_input(
+                "🔑 Clé API Google Gemini ou OpenAI",
+                type="password",
+                value=os.getenv("GOOGLE_API_KEY", ""),
+                help="Obtenez votre clé sur https://makersuite.google.com/app/apikey",
+            )
+            model = st.selectbox(
+                "🤖 Modèle Gemini & OpenAI",
+                ["gemini-2.5-flash-lite", "gemini-2.5-flash", "gemini-2.5-pro","gpt-5", "gpt-5-mini", "gpt-5-nano", "gpt-4o", "gpt-4o-mini", "gpt-4.1", "gpt-4.1-mini", "gpt-4.1-nano", "gpt-4-turbo", "gpt-4", "o1", "o1-mini", "o3", "o3-mini"],
+                index=0,
+                help="Flash = rapide & économique · Pro = plus précis",
+            )
+            provider = "gemini"  # valeur par défaut, sera affiné par l'orchestrateur
 
         st.divider()
         st.caption("v1.0.0 · CV-Evaluator © JEMS GROUP")
 
-        return api_key, model
+        return api_key, model, provider
 
 
 # ══════════════════════════════════════════════
@@ -925,7 +940,7 @@ def render_export_section(report: FinalReport):
 
 def main():
     render_header()
-    api_key, model = render_sidebar()
+    api_key, model, provider = render_sidebar()
 
     # ── Upload section ──
     st.markdown('<div class="section-title">📤 Importer un CV</div>', unsafe_allow_html=True)
@@ -966,8 +981,9 @@ def main():
             unsafe_allow_html=True,
         )
 
-        if not api_key:
-            st.error("⚠️ Veuillez entrer votre clé API Gemini dans la barre latérale.")
+        # Vérification de la clé API seulement si mode payant
+        if not st.session_state.get("use_ollama", False) and not api_key:
+            st.error("⚠️ Veuillez entrer votre clé API dans la barre latérale ou activez le mode gratuit.")
             return
 
         # ── Evaluate button ──
@@ -996,11 +1012,14 @@ def main():
                         st.text(cv_text[:3000] + ("…" if len(cv_text) > 3000 else ""))
 
                     # Step 2 – run evaluation
+                    # Si mode gratuit, on force provider="ollama" et api_key=None
+                    effective_provider = "ollama" if st.session_state.get("use_ollama", False) else None
                     orchestrator = CVEvaluationOrchestrator(
-                        api_key=api_key,
+                        api_key=api_key,  # sera ignoré si ollama grâce à l'orchestrateur
                         model_name=model,
                         cache_dir=None,
                         progress_callback=progress_callback,
+                        provider=effective_provider,  # transmet le provider forcé
                     )
 
                     report = orchestrator.evaluate(cv_text)
@@ -1053,4 +1072,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
