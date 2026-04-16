@@ -59,7 +59,7 @@ class CVEvaluationOrchestrator:
         model_name: str = "gemini-1.5-flash",
         cache_dir: Optional[str] = None,
         progress_callback: Optional[Callable[[str, float], None]] = None,
-        provider: Optional[Literal["gemini", "openai", "ollama"]] = None,  # <-- NOUVEAU PARAMÈTRE
+        provider: Optional[Literal["gemini", "openai", "ollama"]] = None,
     ):
         self.api_key = api_key
         self.model_name = model_name
@@ -70,17 +70,21 @@ class CVEvaluationOrchestrator:
         else:
             self.provider = detect_provider(model_name)
         
-        # Pour Ollama, on n'a pas besoin de clé API (on la passe à None)
-        effective_api_key = None if self.provider == "ollama" else api_key
+        # Gestion de la clé API : 
+        # - Pour Ollama : on garde la clé si elle est fournie (mode cloud), sinon None (mode local)
+        # - Pour Gemini/OpenAI : on utilise la clé telle quelle (doit être valide)
+        if self.provider == "ollama":
+            effective_api_key = api_key if api_key else None
+        else:
+            effective_api_key = api_key
         
         self.cache = ResultCache(cache_dir=cache_dir)
         self.progress_callback = progress_callback or (lambda msg, pct: None)
 
         logger.info(f"[Orchestrator] Provider: '{self.provider}' for model '{model_name}'")
 
-        # ✅ provider est passé à chaque agent
         agent_kwargs = {
-            "api_key": effective_api_key,  # <-- None pour Ollama
+            "api_key": effective_api_key,
             "model_name": model_name,
             "provider": self.provider,
         }
@@ -90,7 +94,6 @@ class CVEvaluationOrchestrator:
         self.scoring_agent = ScoringAgent(**agent_kwargs)
         self.quality_control_agent = QualityControlAgent(**agent_kwargs)
         self.table_generator_agent = TableGeneratorAgent(**agent_kwargs)
-
     def _update_progress(self, message: str, percentage: float):
         """Send progress update."""
         self.progress_callback(message, percentage)
