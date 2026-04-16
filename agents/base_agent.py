@@ -12,14 +12,17 @@ from pydantic import BaseModel, ValidationError
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_core.language_models.chat_models import BaseChatModel
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
+import httpx
+from langchain_ollama import ChatOllama
+
+
 
 logger = logging.getLogger(__name__)
 
 T = TypeVar("T", bound=BaseModel)
 
-# Supported provider types (Ollama ajouté)
-ProviderType = Literal["gemini", "openai", "ollama"]
 
+ProviderType = Literal["gemini", "openai", "ollama"]
 
 def create_llm(
     provider: ProviderType,
@@ -61,7 +64,6 @@ def create_llm(
         )
 
     elif provider == "ollama":
-        # Support gratuit via Ollama (local ou cloud)
         try:
             from langchain_ollama import ChatOllama
         except ImportError:
@@ -70,16 +72,29 @@ def create_llm(
                 "Install it with: pip install langchain-ollama"
             )
 
-        resolved_model = model_name or os.getenv("OLLAMA_MODEL", "gemini-3-flash-preview:cloud")
+        resolved_model = model_name or os.getenv("OLLAMA_MODEL", "llama3.2")
 
-        # Pas de base_url explicite : utilise la valeur par défaut (localhost:11434)
-        # Si vous voulez un serveur distant, définissez la variable d'environnement OLLAMA_HOST
-        # ex: OLLAMA_HOST=http://mon-cloud-ollama:11434
-        return ChatOllama(
-            model=resolved_model,
-            temperature=temperature,
-            # Aucun paramètre base_url ici
-        )
+        # Mode cloud Ollama si une clé API est fournie
+        if api_key:
+            base_url = "https://ollama.com"
+            client = httpx.Client(
+                base_url=base_url,
+                headers={"Authorization": f"Bearer {api_key}"},
+                timeout=60.0,
+            )
+            logger.info(f"[Ollama] Using cloud mode with base_url={base_url}")
+            return ChatOllama(
+                model=resolved_model,
+                temperature=temperature,
+                client=client,
+            )
+        else:
+            # Mode local (aucune clé, serveur par défaut sur localhost:11434)
+            logger.info("[Ollama] Using local mode (no API key, expecting local server at http://localhost:11434)")
+            return ChatOllama(
+                model=resolved_model,
+                temperature=temperature,
+            )
 
     else:
         raise ValueError(f"Unsupported provider: '{provider}'. Choose 'gemini', 'openai' or 'ollama'.")
