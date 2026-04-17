@@ -1,4 +1,3 @@
-
 """
 CV Evaluator - Multi-Agent Streamlit Application
 Main entry point for the CV evaluation system.
@@ -423,26 +422,53 @@ def render_sidebar():
         </div>
         """, unsafe_allow_html=True)
 
-        st.divider()
+        # ── Bouton mode gratuit Ollama ──
+        if st.button("🔓 Utilisation gratuite (Ollama)", use_container_width=True):
+            st.session_state.use_ollama = not st.session_state.get("use_ollama", False)
+            reset_evaluation()  # réinitialise les résultats
+            st.rerun()
 
-        api_key = st.text_input(
-            "🔑 Clé API Google Gemini Ou OpenAI",
-            type="password",
-            value=os.getenv("GOOGLE_API_KEY", ""),
-            help="Obtenez votre clé sur https://makersuite.google.com/app/apikey",
-        )
+        if st.session_state.get("use_ollama", False):
+            st.success("✅ Mode gratuit activé – Ollama")
+            st.info("Utilisation locale (sans clé) ou cloud (avec clé Bearer).")
 
-        model = st.selectbox(
-            "🤖 Modèle Gemini & OpenAI",
-            ["gemini-2.5-flash-lite", "gemini-2.5-flash", "gemini-2.5-pro","gpt-5", "gpt-5-mini", "gpt-5-nano", "gpt-4o", "gpt-4o-mini", "gpt-4.1", "gpt-4.1-mini", "gpt-4.1-nano", "gpt-4-turbo", "gpt-4", "o1", "o1-mini", "o3", "o3-mini"],
-            index=0,
-            help="Flash = rapide & économique · Pro = plus précis",
-        )
+            # Champ pour la clé API Ollama Cloud (optionnelle)
+            ollama_api_key = st.text_input(
+                "🔑 Clé API Ollama Cloud (optionnelle)",
+                type="password",
+                value=os.getenv("OLLAMA_API_KEY", ""),
+                help="Laissez vide pour utiliser le serveur local (http://localhost:11434). "
+                     "Renseignez votre token Bearer pour utiliser https://ollama.com",
+            )
+            # Sélection du modèle (vous pouvez ajuster la liste)
+            model = st.selectbox(
+                "🤖 Modèle Ollama",
+                ["gemini-3-flash-preview:cloud", "gpt-oss:120b-cloud", "deepseek-v3.1:671b-cloud"],
+                index=0,
+                help="Modèle à utiliser avec Ollama",
+            )
+            api_key = ollama_api_key  # sera None si vide
+            provider = "ollama"
+        else:
+            st.divider()
+            api_key = st.text_input(
+                "🔑 Clé API Google Gemini ou OpenAI",
+                type="password",
+                value=os.getenv("GOOGLE_API_KEY", ""),
+                help="Obtenez votre clé sur https://makersuite.google.com/app/apikey",
+            )
+            model = st.selectbox(
+                "🤖 Modèle Gemini & OpenAI",
+                ["gemini-2.5-flash-lite", "gemini-2.5-flash", "gemini-2.5-pro","gpt-5", "gpt-5-mini", "gpt-5-nano", "gpt-4o", "gpt-4o-mini", "gpt-4.1", "gpt-4.1-mini", "gpt-4.1-nano", "gpt-4-turbo", "gpt-4", "o1", "o1-mini", "o3", "o3-mini"],
+                index=0,
+                help="Flash = rapide & économique · Pro = plus précis",
+            )
+            provider = "gemini"  # valeur par défaut, sera affiné par l'orchestrateur
 
         st.divider()
         st.caption("v1.0.0 · CV-Evaluator © JEMS GROUP")
 
-        return api_key, model
+        return api_key, model, provider
 
 
 # ══════════════════════════════════════════════
@@ -925,7 +951,7 @@ def render_export_section(report: FinalReport):
 
 def main():
     render_header()
-    api_key, model = render_sidebar()
+    api_key, model, provider = render_sidebar()  # provider = "ollama" ou "gemini"/"openai"
 
     # ── Upload section ──
     st.markdown('<div class="section-title">📤 Importer un CV</div>', unsafe_allow_html=True)
@@ -952,11 +978,10 @@ def main():
         "Glissez votre CV au format PDF ici",
         type=["pdf"],
         help="Format accepté : PDF · Taille max recommandée : 10 Mo",
-        disabled="report" in st.session_state,  # lock uploader once evaluated
+        disabled="report" in st.session_state,
     )
 
     if uploaded_file:
-        # File info card
         st.markdown(
             f'<div class="file-info-banner">'
             f'<span class="icon">📄</span>'
@@ -966,8 +991,9 @@ def main():
             unsafe_allow_html=True,
         )
 
-        if not api_key:
-            st.error("⚠️ Veuillez entrer votre clé API Gemini dans la barre latérale.")
+        # Vérification de la clé API : nécessaire uniquement pour les providers payants
+        if provider != "ollama" and not api_key:
+            st.error("⚠️ Veuillez entrer votre clé API dans la barre latérale ou activez le mode gratuit.")
             return
 
         # ── Evaluate button ──
@@ -981,7 +1007,6 @@ def main():
                     status_box.info(f"⏳ {message}")
 
                 try:
-                    # Step 1 – extract text
                     with st.spinner("📄 Extraction du texte du PDF…"):
                         cv_text = extract_text_from_uploaded_file(uploaded_file)
 
@@ -989,24 +1014,23 @@ def main():
                         st.error("❌ Le PDF semble vide ou illisible. Veuillez vérifier le fichier.")
                         return
 
-                    # Persist extracted text for download later
                     st.session_state["cv_text"] = cv_text
 
                     with st.expander("📄 Texte extrait du CV (aperçu)", expanded=False):
                         st.text(cv_text[:3000] + ("…" if len(cv_text) > 3000 else ""))
 
-                    # Step 2 – run evaluation
+                    # Création de l'orchestrateur avec le provider déterminé par la sidebar
                     orchestrator = CVEvaluationOrchestrator(
-                        api_key=api_key,
+                        api_key=api_key,          # sera utilisé pour Ollama cloud ou Gemini/OpenAI
                         model_name=model,
                         cache_dir=None,
                         progress_callback=progress_callback,
+                        provider=provider,        # "ollama", "gemini" ou "openai"
                     )
 
                     report = orchestrator.evaluate(cv_text)
 
-                    # Persist results
-                    st.session_state["report"]             = report
+                    st.session_state["report"] = report
                     st.session_state["evaluated_filename"] = uploaded_file.name
 
                     progress_bar.progress(1.0)
@@ -1022,7 +1046,6 @@ def main():
         report = st.session_state["report"]
         st.divider()
 
-        # Sidebar metadata
         with st.sidebar:
             st.divider()
             st.markdown("### 📊 Métadonnées")
@@ -1053,4 +1076,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

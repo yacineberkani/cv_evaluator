@@ -1,26 +1,128 @@
 """
 Base agent class for all CV evaluation agents.
-Supports multiple LLM providers: OpenAI (ChatGPT), Google (Gemini) via LangChain.
+Supports multiple LLM providers: OpenAI (ChatGPT), Google (Gemini) via LangChain,
+and free/local Ollama via custom wrapper.
 """
 
 import json
 import re
 import os
 import logging
-from typing import Any, Dict, Optional, Type, TypeVar, Literal
+from typing import Any, Dict, Optional, Type, TypeVar, Literal, Iterator
 from pydantic import BaseModel, ValidationError
-from langchain_core.messages import HumanMessage, SystemMessage
+from langchain_core.messages import HumanMessage, SystemMessage, AIMessage, BaseMessage
 from langchain_core.language_models.chat_models import BaseChatModel
+from langchain_core.outputs import ChatResult, ChatGeneration
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 
 logger = logging.getLogger(__name__)
 
 T = TypeVar("T", bound=BaseModel)
 
-# Supported provider types
-ProviderType = Literal["gemini", "openai"]
+ProviderType = Literal["gemini", "openai", "ollama"]
 
 
+# ------------------------------------------------------------
+# Ollama Chat Model Wrapper (using official ollama package)
+# ------------------------------------------------------------
+class OllamaChatModel(BaseChatModel):
+    """
+    Custom wrapper for Ollama using the official 'ollama' Python client.
+    Compatible with LangChain's BaseChatModel interface.
+    Supports both local (no API key) and cloud (with Bearer token) modes.
+    """
+    model: str = "llama3.2"
+    temperature: float = 0.0
+    api_key: Optional[str] = None
+
+    def __init__(self, model: str, temperature: float, api_key: Optional[str] = None, **kwargs):
+        super().__init__(model=model, temperature=temperature, api_key=api_key, **kwargs)
+        from ollama import Client
+        if api_key:
+            # Cloud mode
+            self._client = Client(
+                host="https://ollama.com",
+                headers={"Authorization": f"Bearer {api_key}"}
+            )
+            logger.info("OllamaChatModel: using cloud mode with API key")
+        else:
+            # Local mode
+            self._client = Client(host="http://localhost:11434")
+            logger.info("OllamaChatModel: using local mode (no API key)")
+
+    def _convert_messages_to_ollama(self, messages: list[BaseMessage]) -> list[dict]:
+        """Convert LangChain messages to Ollama format."""
+        ollama_messages = []
+        for msg in messages:
+            if isinstance(msg, SystemMessage):
+                role = "system"
+            elif isinstance(msg, HumanMessage):
+                role = "user"
+            elif isinstance(msg, AIMessage):
+                role = "assistant"
+            else:
+                role = "user"
+            ollama_messages.append({"role": role, "content": msg.content})
+        return ollama_messages
+
+    def _generate(
+        self,
+        messages: list[BaseMessage],
+        stop: Optional[list[str]] = None,
+        run_manager = None,
+        **kwargs,
+    ) -> ChatResult:
+        ollama_messages = self._convert_messages_to_ollama(messages)
+        try:
+            response = self._client.chat(
+                model=self.model,
+                messages=ollama_messages,
+                stream=False,
+                options={"temperature": self.temperature}
+            )
+            content = response["message"]["content"]
+        except Exception as e:
+            logger.error(f"Ollama chat error: {e}")
+            raise
+        message = AIMessage(content=content)
+        generation = ChatGeneration(message=message)
+        return ChatResult(generations=[generation])
+
+    def _stream(
+        self,
+        messages: list[BaseMessage],
+        stop: Optional[list[str]] = None,
+        run_manager = None,
+        **kwargs,
+    ) -> Iterator[ChatGeneration]:
+        """Streaming mode (optional)."""
+        ollama_messages = self._convert_messages_to_ollama(messages)
+        try:
+            stream = self._client.chat(
+                model=self.model,
+                messages=ollama_messages,
+                stream=True,
+                options={"temperature": self.temperature}
+            )
+            for chunk in stream:
+                if "message" in chunk and "content" in chunk["message"]:
+                    content = chunk["message"]["content"]
+                    message = AIMessage(content=content)
+                    yield ChatGeneration(message=message)
+                    if run_manager:
+                        run_manager.on_llm_new_token(content)
+        except Exception as e:
+            logger.error(f"Ollama stream error: {e}")
+            raise
+
+    @property
+    def _llm_type(self) -> str:
+        return "ollama-custom"
+
+
+# ------------------------------------------------------------
+# Factory function for LLM creation
+# ------------------------------------------------------------
 def create_llm(
     provider: ProviderType,
     model_name: Optional[str],
@@ -42,7 +144,7 @@ def create_llm(
             model=resolved_model,
             google_api_key=resolved_key,
             temperature=temperature,
-            convert_system_message_to_human=True,  # Gemini doesn't support SystemMessage natively
+            convert_system_message_to_human=True,
         )
 
     elif provider == "openai":
@@ -60,14 +162,26 @@ def create_llm(
             temperature=temperature,
         )
 
+    elif provider == "ollama":
+        resolved_model = model_name or os.getenv("OLLAMA_MODEL", "llama3.2")
+        # Use our custom wrapper
+        return OllamaChatModel(
+            model=resolved_model,
+            temperature=temperature,
+            api_key=api_key,   # None for local, actual key for cloud
+        )
+
     else:
-        raise ValueError(f"Unsupported provider: '{provider}'. Choose 'gemini' or 'openai'.")
+        raise ValueError(f"Unsupported provider: '{provider}'. Choose 'gemini', 'openai' or 'ollama'.")
 
 
+# ------------------------------------------------------------
+# BaseAgent class (unchanged except for the use of create_llm)
+# ------------------------------------------------------------
 class BaseAgent:
     """
     Base class for all CV evaluation agents.
-    Supports OpenAI (ChatGPT) and Google (Gemini) via LangChain.
+    Supports OpenAI (ChatGPT), Google (Gemini) and Ollama (local/cloud) via custom wrapper.
     """
 
     def __init__(
@@ -95,11 +209,6 @@ class BaseAgent:
         logger.info(f"[{self.name}] Initialized with provider='{provider}', model='{self.model_name or 'default'}'")
 
     def _build_messages(self, prompt: str) -> list:
-        """
-        Build the message list for the LLM.
-        Gemini uses convert_system_message_to_human, so SystemMessage is safe for OpenAI
-        and handled automatically for Gemini.
-        """
         messages = []
         if self.role:
             messages.append(SystemMessage(content=self.role))
@@ -122,7 +231,6 @@ class BaseAgent:
                     return candidate
                 except json.JSONDecodeError:
                     continue
-
         return text.strip()
 
     @retry(
@@ -143,7 +251,7 @@ class BaseAgent:
     
         json_str = self._extract_json_from_response(raw_text)
     
-        # --- JSON parse ---
+        # JSON parse
         try:
             data = json.loads(json_str)
         except json.JSONDecodeError as e:
@@ -154,18 +262,16 @@ class BaseAgent:
             )
             fix_response = self.llm.invoke([HumanMessage(content=fix_prompt)])
             json_str = self._extract_json_from_response(fix_response.content)
-            data = json.loads(json_str)  # raises → retry
+            data = json.loads(json_str)
     
-        # --- Pydantic validation ---
+        # Pydantic validation
         try:
             result = output_model.model_validate(data)
         except ValidationError as e:
-            # Log exactly which fields are wrong
             logger.warning(
                 f"[{self.name}] Pydantic ValidationError:\n{e}\n"
                 f"Data received:\n{json.dumps(data, indent=2, ensure_ascii=False)}"
             )
-            # Send schema + errors back to LLM for self-correction
             schema = json.dumps(output_model.model_json_schema(), indent=2, ensure_ascii=False)
             fix_prompt = (
                 f"Le JSON suivant ne respecte pas le schéma attendu.\n\n"
@@ -177,11 +283,10 @@ class BaseAgent:
             fix_response = self.llm.invoke([HumanMessage(content=fix_prompt)])
             json_str = self._extract_json_from_response(fix_response.content)
             data = json.loads(json_str)
-            result = output_model.model_validate(data)  # raises ValidationError → retry
+            result = output_model.model_validate(data)
     
         logger.info(f"[{self.name}] Successfully parsed and validated output.")
         return result
 
     def run(self, **kwargs) -> Any:
-        """Override in subclasses."""
         raise NotImplementedError("Subclasses must implement run()")
