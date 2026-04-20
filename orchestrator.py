@@ -41,6 +41,8 @@ logger = logging.getLogger(__name__)
 
 # Models that belong to OpenAI — everything else is treated as Gemini
 GEMINI_MODEL_PREFIXES = ("gemini-2.5-flash-lite", "gemini-2.5-flash", "gemini-2.5-pro")
+# Ollama Cloud models — identified by "-cloud" suffix
+OLLAMA_MODEL_SUFFIXES = ("-cloud",)
 
 
 def detect_provider(model_name: str) -> str:
@@ -48,6 +50,8 @@ def detect_provider(model_name: str) -> str:
     model_lower = model_name.lower()
     if any(model_lower.startswith(p) for p in GEMINI_MODEL_PREFIXES):
         return "gemini"
+    if any(model_lower.endswith(s) for s in OLLAMA_MODEL_SUFFIXES):
+        return "ollama"
     return "openai"
 
 
