@@ -450,7 +450,7 @@ def render_sidebar():
         if use_ollama:
             # Ollama Cloud models available
             ollama_models = [
-                "gemma-3n-e4b:cloud",
+                "glm-5.1:cloud",
                 "gemini-3-flash-preview:cloud",
                 "gpt-oss:120b-cloud",
                 "deepseek-v3.1:671b-cloud",
@@ -474,7 +474,7 @@ def render_sidebar():
 
             model = st.selectbox(
                 "🤖 Modèle Gemini & OpenAI",
-                ["gemini-2.5-flash-lite", "gemini-2.5-flash", "gemini-2.5-pro","gpt-5", "gpt-5-mini", "gpt-5-nano", "gpt-4o", "gpt-4o-mini", "gpt-4.1", "gpt-4.1-mini", "gpt-4.1-nano", "gpt-4-turbo", "gpt-4", "o1", "o3", "o3-mini"],
+                ["gemini-2.5-flash-lite", "gemini-2.5-flash", "gemini-2.5-pro","gpt-5", "gpt-5-mini", "gpt-5-nano", "gpt-4o", "gpt-4o-mini", "gpt-4.1", "gpt-4.1-mini", "gpt-4.1-nano", "gpt-4-turbo", "gpt-4"],
                 index=0,
                 help="Flash = rapide & économique · Pro = plus précis",
             )
