@@ -11,14 +11,15 @@ from typing import Any, Dict, Optional, Type, TypeVar, Literal
 from pydantic import BaseModel, ValidationError
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_core.language_models.chat_models import BaseChatModel
-from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
+from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type, retry_if_exception
+import requests
 
 logger = logging.getLogger(__name__)
 
 T = TypeVar("T", bound=BaseModel)
 
 # Supported provider types
-ProviderType = Literal["gemini", "openai"]
+ProviderType = Literal["gemini", "openai", "ollama"]
 
 
 def create_llm(
@@ -58,10 +59,31 @@ def create_llm(
             model=resolved_model,
             openai_api_key=resolved_key,
             temperature=temperature,
+            request_timeout=60,  # 60s timeout
+            max_retries=2,
+        )
+
+    elif provider == "ollama":
+        from langchain_openai import ChatOpenAI
+
+        # Ollama Cloud API configuration
+        resolved_key = api_key or os.getenv("OLLAMA_API_KEY")
+        resolved_model = model_name or os.getenv("OLLAMA_MODEL", "gemma-3n-e4b:cloud")
+
+        if not resolved_key:
+            raise ValueError("OLLAMA_API_KEY not found. Set it in .env or pass it directly.")
+
+        return ChatOpenAI(
+            model=resolved_model,
+            base_url="https://ollama.com/v1",
+            openai_api_key=resolved_key,
+            temperature=temperature,
+            request_timeout=120,  # 120s timeout for Ollama Cloud
+            max_retries=2,
         )
 
     else:
-        raise ValueError(f"Unsupported provider: '{provider}'. Choose 'gemini' or 'openai'.")
+        raise ValueError(f"Unsupported provider: '{provider}'. Choose 'gemini', 'openai', or 'ollama'.")
 
 
 class BaseAgent:
