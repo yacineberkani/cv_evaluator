@@ -9,12 +9,17 @@ import json
 import os
 import sys
 import logging
+import warnings
 from datetime import datetime
 from dotenv import load_dotenv
 
 # ── Setup ──
 load_dotenv()
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
+logger = logging.getLogger(__name__)
+
+# Suppress urllib3/requests compatibility warnings
+warnings.filterwarnings("ignore", category=ImportWarning, module="requests")
 
 # Add project root to path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -357,8 +362,18 @@ def get_bareme(note_sur_20: float) -> dict:
 
 
 def reset_evaluation():
-    """Clear all evaluation-related session state keys."""
-    for key in ["report", "cv_text", "evaluated_filename"]:
+    """
+    Clear all evaluation-related session state keys.
+    Called when user wants to start a new evaluation.
+    """
+    keys_to_clear = [
+        "report",
+        "cv_text",
+        "evaluated_filename",
+        "evaluation_started",
+        "evaluation_complete",
+    ]
+    for key in keys_to_clear:
         st.session_state.pop(key, None)
 
 
@@ -425,24 +440,49 @@ def render_sidebar():
 
         st.divider()
 
-        api_key = st.text_input(
-            "🔑 Clé API Google Gemini Ou OpenAI",
-            type="password",
-            value=os.getenv("GOOGLE_API_KEY", ""),
-            help="Obtenez votre clé sur https://makersuite.google.com/app/apikey",
+        # ── Mode Gratuit Ollama Cloud ──
+        use_ollama = st.toggle(
+            "🆓 Utiliser le mode gratuit (Ollama Cloud)",
+            value=False,
+            help="Aucune clé API requise · Modèles open-source · Totalement gratuit",
         )
 
-        model = st.selectbox(
-            "🤖 Modèle Gemini & OpenAI",
-            ["gemini-2.5-flash-lite", "gemini-2.5-flash", "gemini-2.5-pro","gpt-5", "gpt-5-mini", "gpt-5-nano", "gpt-4o", "gpt-4o-mini", "gpt-4.1", "gpt-4.1-mini", "gpt-4.1-nano", "gpt-4-turbo", "gpt-4", "o1", "o1-mini", "o3", "o3-mini"],
-            index=0,
-            help="Flash = rapide & économique · Pro = plus précis",
-        )
+        if use_ollama:
+            # Ollama Cloud models available
+            ollama_models = [
+                "gemma-3n-e4b:cloud",
+                "gemini-3-flash-preview:cloud",
+                "gpt-oss:120b-cloud",
+                "deepseek-v3.1:671b-cloud",
+            ]
+            model = st.selectbox(
+                "🤖 Modèle Ollama Cloud",
+                ollama_models,
+                index=0,
+                help="Modèles open-source accessibles via l'API Ollama Cloud",
+            )
+            api_key = ""  # No API key needed for Ollama Cloud (uses default embedded key)
+            st.info("🔑 Clé API Ollama incluse automatiquement")
+        else:
+            # ── Mode Premium (Gemini / OpenAI) ──
+            api_key = st.text_input(
+                "🔑 Clé API Google Gemini Ou OpenAI",
+                type="password",
+                value=os.getenv("GOOGLE_API_KEY", ""),
+                help="Obtenez votre clé sur https://makersuite.google.com/app/apikey",
+            )
+
+            model = st.selectbox(
+                "🤖 Modèle Gemini & OpenAI",
+                ["gemini-2.5-flash-lite", "gemini-2.5-flash", "gemini-2.5-pro","gpt-5", "gpt-5-mini", "gpt-5-nano", "gpt-4o", "gpt-4o-mini", "gpt-4.1", "gpt-4.1-mini", "gpt-4.1-nano", "gpt-4-turbo", "gpt-4", "o1", "o3", "o3-mini"],
+                index=0,
+                help="Flash = rapide & économique · Pro = plus précis",
+            )
 
         st.divider()
         st.caption("v1.0.0 · CV-Evaluator © JEMS GROUP")
 
-        return api_key, model
+        return api_key, model, use_ollama
 
 
 # ══════════════════════════════════════════════
@@ -925,7 +965,7 @@ def render_export_section(report: FinalReport):
 
 def main():
     render_header()
-    api_key, model = render_sidebar()
+    api_key, model, use_ollama = render_sidebar()
 
     # ── Upload section ──
     st.markdown('<div class="section-title">📤 Importer un CV</div>', unsafe_allow_html=True)
@@ -951,9 +991,14 @@ def main():
     uploaded_file = st.file_uploader(
         "Glissez votre CV au format PDF ici",
         type=["pdf"],
-        help="Format accepté : PDF · Taille max recommandée : 10 Mo",
+        help="Format accepté : PDF · Taille max : 10 Mo · 2 pages max recommandées",
         disabled="report" in st.session_state,  # lock uploader once evaluated
     )
+
+    # Validate file size early
+    if uploaded_file and uploaded_file.size > 10 * 1024 * 1024:
+        st.error("❌ Le fichier dépasse 10 Mo. Veuillez compresser votre PDF.")
+        return
 
     if uploaded_file:
         # File info card
@@ -966,8 +1011,9 @@ def main():
             unsafe_allow_html=True,
         )
 
-        if not api_key:
-            st.error("⚠️ Veuillez entrer votre clé API Gemini dans la barre latérale.")
+        # API key validation: required for Gemini/OpenAI, not for Ollama Cloud
+        if not use_ollama and not api_key:
+            st.error("⚠️ Veuillez entrer votre clé API Gemini/OpenAI dans la barre latérale.")
             return
 
         # ── Evaluate button ──
@@ -983,10 +1029,28 @@ def main():
                 try:
                     # Step 1 – extract text
                     with st.spinner("📄 Extraction du texte du PDF…"):
-                        cv_text = extract_text_from_uploaded_file(uploaded_file)
+                        try:
+                            cv_text = extract_text_from_uploaded_file(uploaded_file)
+                        except Exception as e:
+                            # Handle custom PDFExtractionError with user-friendly message
+                            error_msg = str(e)
+                            if "vide" in error_msg.lower():
+                                st.error("❌ Le PDF est vide. Veuillez vérifier le fichier.")
+                            elif "scanné" in error_msg.lower() or "image" in error_msg.lower():
+                                st.error(
+                                    "❌ Le PDF semble être une image scannée. "
+                                    "Le texte ne peut pas être extrait. "
+                                    "Utilisez un PDF avec du texte sélectionnable."
+                                )
+                            else:
+                                st.error(f"❌ Erreur lors de la lecture du PDF : {error_msg}")
+                            return
 
-                    if len(cv_text.strip()) < 50:
-                        st.error("❌ Le PDF semble vide ou illisible. Veuillez vérifier le fichier.")
+                    if len(cv_text.strip()) < 100:
+                        st.error(
+                            "❌ Le PDF contient très peu de texte (< 100 caractères). "
+                            "Veuillez vérifier le fichier."
+                        )
                         return
 
                     # Persist extracted text for download later
@@ -996,12 +1060,29 @@ def main():
                         st.text(cv_text[:3000] + ("…" if len(cv_text) > 3000 else ""))
 
                     # Step 2 – run evaluation
-                    orchestrator = CVEvaluationOrchestrator(
-                        api_key=api_key,
-                        model_name=model,
-                        cache_dir=None,
-                        progress_callback=progress_callback,
-                    )
+                    # Force ollama provider when using Ollama Cloud mode
+                    if use_ollama:
+                        # Use API key from environment variable (required for Ollama Cloud)
+                        ollama_api_key = os.getenv("OLLAMA_API_KEY")
+                        if not ollama_api_key:
+                            st.error(
+                                "⚠️ Clé API Ollama manquante. "
+                                "Ajoutez OLLAMA_API_KEY dans votre fichier .env ou en variable d'environnement."
+                            )
+                            return
+                        orchestrator = CVEvaluationOrchestrator(
+                            api_key=ollama_api_key,
+                            model_name=model,
+                            cache_dir=None,
+                            progress_callback=progress_callback,
+                        )
+                    else:
+                        orchestrator = CVEvaluationOrchestrator(
+                            api_key=api_key,
+                            model_name=model,
+                            cache_dir=None,
+                            progress_callback=progress_callback,
+                        )
 
                     report = orchestrator.evaluate(cv_text)
 
@@ -1013,13 +1094,88 @@ def main():
                     status_box.success("✅ Évaluation terminée avec succès !")
 
                 except Exception as e:
-                    st.error(f"❌ Erreur lors de l'évaluation : {str(e)}")
-                    st.exception(e)
+                    error_msg = str(e)
+                    # User-friendly error messages
+                    if "API" in error_msg or "api" in error_msg.lower():
+                        st.error("❌ Erreur de connexion à l'API. Vérifiez votre clé API et votre connexion internet.")
+                    elif "timeout" in error_msg.lower():
+                        st.error("⏱️ La requête a expiré. Le modèle est peut-être surchargé. Réessayez dans quelques instants.")
+                    elif "JSON" in error_msg or "parsing" in error_msg.lower():
+                        st.error("🔧 Erreur d'analyse de la réponse IA. Le modèle a renvoyé un format invalide. Réessayez.")
+                    else:
+                        st.error(f"❌ Erreur lors de l'évaluation : {error_msg}")
+                    logger.error(f"[App] Evaluation error: {error_msg}", exc_info=True)
                     return
 
     # ── Results display ──
     if "report" in st.session_state:
         report = st.session_state["report"]
+
+        # ══════════════════════════════════════════════
+        # NEW EVALUATION SECTION - Prominent CTA
+        # ══════════════════════════════════════════════
+        st.markdown("""
+        <style>
+            .new-eval-section {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                padding: 1.5rem 2rem;
+                background: linear-gradient(135deg, rgba(79,110,247,0.08), rgba(118,75,162,0.08));
+                border: 2px solid #4f6ef7;
+                border-radius: 16px;
+                margin: 1.5rem 0;
+                box-shadow: 0 4px 20px rgba(79,110,247,0.15);
+            }
+            .new-eval-text h3 {
+                color: #1a1a2e;
+                margin: 0 0 0.3rem 0;
+                font-size: 1.3rem;
+            }
+            .new-eval-text p {
+                color: #666;
+                margin: 0;
+                font-size: 0.95rem;
+            }
+            .new-eval-btn {
+                background: linear-gradient(135deg, #4f6ef7, #764ba2);
+                color: white;
+                border: none;
+                padding: 0.85rem 2rem;
+                border-radius: 12px;
+                font-size: 1rem;
+                font-weight: 600;
+                cursor: pointer;
+                box-shadow: 0 4px 15px rgba(79,110,247,0.3);
+                transition: transform 0.2s, box-shadow 0.2s;
+            }
+            .new-eval-btn:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 6px 20px rgba(79,110,247,0.4);
+            }
+        </style>
+        """, unsafe_allow_html=True)
+
+        st.markdown("""
+        <div class="new-eval-section">
+            <div class="new-eval-text">
+                <h3>✨ Évaluation terminée !</h3>
+                <p>Souhaitez-vous analyser un nouveau CV ?</p>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        # Full-width button for new evaluation
+        if st.button(
+            "🔄 Nouvelle évaluation",
+            type="primary",
+            use_container_width=True,
+            help="Réinitialiser tous les résultats et commencer une nouvelle évaluation",
+            key="new_evaluation_btn"
+        ):
+            reset_evaluation()
+            st.rerun()
+
         st.divider()
 
         # Sidebar metadata
@@ -1028,9 +1184,33 @@ def main():
             st.markdown("### 📊 Métadonnées")
             meta = report.metadata
             st.caption(f"📅 {meta.get('date_evaluation', 'N/A')}")
-            st.caption(f"🤖 {meta.get('modele_llm', 'N/A')}")
+
+            # Display provider badge
+            model_name = meta.get('modele_llm', 'N/A')
+            provider_badge = ""
+            if model_name.endswith("-cloud") or "ollama" in model_name.lower():
+                provider_badge = "🆓 Ollama Cloud"
+            elif model_name.startswith("gemini"):
+                provider_badge = "💎 Google Gemini"
+            else:
+                provider_badge = "🔵 OpenAI"
+
+            st.caption(f"🤖 {model_name}")
+            st.markdown(f"<span class='chip'>{provider_badge}</span>", unsafe_allow_html=True)
             st.caption(f"⏱️ {meta.get('duree_evaluation_secondes', 'N/A')} s")
             st.caption(f"📂 {', '.join(meta.get('sections_detectees', []))}")
+
+            # Also add a reset button in sidebar for convenience
+            st.divider()
+            if st.button(
+                "🗑️ Effacer les résultats",
+                type="secondary",
+                use_container_width=True,
+                help="Supprimer les résultats actuels",
+                key="sidebar_reset_btn"
+            ):
+                reset_evaluation()
+                st.rerun()
 
         tabs = st.tabs([
             "📊 Scores",
