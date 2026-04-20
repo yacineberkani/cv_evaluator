@@ -68,7 +68,7 @@ def create_llm(
 
         # Ollama Cloud API configuration
         resolved_key = api_key or os.getenv("OLLAMA_API_KEY")
-        resolved_model = model_name or os.getenv("OLLAMA_MODEL", "gemma-3n-e4b:cloud")
+        resolved_model = model_name or os.getenv("OLLAMA_MODEL", "glm-5.1:cloud")
 
         if not resolved_key:
             raise ValueError("OLLAMA_API_KEY not found. Set it in .env or pass it directly.")
