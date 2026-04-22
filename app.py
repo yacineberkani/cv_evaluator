@@ -449,15 +449,10 @@ def render_sidebar():
 
         if use_ollama:
             # Ollama Cloud models available
-            ollama_models = [
-                "glm-5.1:cloud",
-                "gemini-3-flash-preview:cloud",
-                "gpt-oss:120b-cloud",
-                "deepseek-v3.1:671b-cloud",
-            ]
+            ollama_models = 
             model = st.selectbox(
                 "🤖 Modèle Ollama Cloud",
-                ollama_models,
+                ["qwen3-coder-next:cloud","gpt-oss:120b-cloud","deepseek-v3.1:671b-cloud"],
                 index=0,
                 help="Modèles open-source accessibles via l'API Ollama Cloud",
             )
