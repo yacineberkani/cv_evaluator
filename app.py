@@ -449,7 +449,7 @@ def render_sidebar():
 
         if use_ollama:
             # Ollama Cloud models available
-            ollama_models = 
+         
             model = st.selectbox(
                 "🤖 Modèle Ollama Cloud",
                 ["qwen3-coder-next:cloud","gpt-oss:120b-cloud","deepseek-v3.1:671b-cloud"],
