@@ -452,7 +452,7 @@ def render_sidebar():
          
             model = st.selectbox(
                 "🤖 Modèle Ollama Cloud",
-                ["qwen3-coder-next:cloud","gpt-oss:120b-cloud","deepseek-v3.1:671b-cloud"],
+                ["gpt-oss:20b-cloud","gpt-oss:120b-cloud","gemma4:31b-cloud"],
                 index=0,
                 help="Modèles open-source accessibles via l'API Ollama Cloud",
             )
