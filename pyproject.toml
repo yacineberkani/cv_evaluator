@@ -1,0 +1,59 @@
+# pyproject.toml
+# Configuration centralisée pour les outils Python
+
+[project]
+name = "cv_evaluator"
+version = "0.1.0"
+description = "Système Multi-Agents d'Évaluation de CV"
+requires-python = ">=3.10"
+dependencies = [
+    # Tes dépendances seront listées ici
+    # (on les gardera aussi dans requirements.txt pour compatibilité)
+]
+
+[tool.ruff]
+# Configuration du linter/formatteur
+target-version = "py310"
+line-length = 88
+
+# Règles activées
+select = [
+    "E",    # pycodestyle (erreurs)
+    "W",    # pycodestyle (warnings)
+    "F",    # pyflakes
+    "I",    # isort (imports)
+    "N",    # pep8-naming
+    "UP",   # pyupgrade
+    "B",    # flake8-bugbear
+    "SIM",  # flake8-simplify
+]
+
+# Règles ignorées (optionnel, ajuste selon tes besoins)
+ignore = [
+    "E501",  # ligne trop longue (parfois inévitable)
+]
+
+# Fichiers à exclure
+exclude = [
+    "venv",
+    ".git",
+    "__pycache__",
+    "*.pyc",
+]
+
+[tool.ruff.format]
+# Configuration du formatage (style black)
+quote-style = "double"
+indent-style = "space"
+
+[tool.pytest.ini_options]
+# Configuration des tests
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_functions = ["test_*"]
+addopts = "-v --tb=short"
+
+[tool.bandit]
+# Configuration de la sécurité
+exclude_dirs = ["venv", "tests"]
+skips = ["B101"]  # B101 = assert utilisé (ok dans les tests)

@@ -1,0 +1,58 @@
+# .github/workflows/test.yml
+# Workflow d'exécution des tests
+#
+# Ce workflow exécute les tests unitaires et génère un rapport de couverture.
+
+name: 🧪 Tests
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: "🧪 Python ${{ matrix.python-version }}"
+    runs-on: ubuntu-latest
+    
+    # ============================================
+    # MATRICE : Teste sur plusieurs versions de Python
+    # ============================================
+    strategy:
+      fail-fast: false      # Continue même si une version échoue
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+    
+    steps:
+      - name: "📥 Checkout code"
+        uses: actions/checkout@v4
+      
+      - name: "🐍 Setup Python ${{ matrix.python-version }}"
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: "pip"
+      
+      - name: "📦 Install dependencies"
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-dev.txt
+          pip install -r requirements.txt
+      
+      # Exécution des tests avec rapport de couverture
+      - name: "🧪 Run tests"
+        run: |
+          pytest --cov=. --cov-report=xml --cov-report=term-missing
+      
+      # Optionnel : Upload du rapport de couverture
+      - name: "📊 Upload coverage report"
+        if: matrix.python-version == '3.11'
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage.xml
+          retention-days: 7

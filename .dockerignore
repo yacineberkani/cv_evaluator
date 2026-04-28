@@ -1,0 +1,31 @@
+# .dockerignore
+# Fichiers à exclure de l'image Docker
+
+# Git
+.git
+.gitignore
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+venv/
+.venv/
+
+# Environnement
+.env
+.env.local
+
+# IDE
+.vscode/
+.idea/
+
+# CI/CD
+.github/
+
+# Docs
+README.md
+LICENSE
+
+# Tests
+tests/

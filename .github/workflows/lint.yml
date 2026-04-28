@@ -1,0 +1,92 @@
+# .github/workflows/lint.yml
+# Workflow de vérification du code (Lint + Format)
+#
+# Ce workflow se déclenche à chaque push ou Pull Request
+# et vérifie que le code respecte les standards de qualité.
+
+name: 🔍 Code Quality
+
+# ============================================
+# DÉCLENCHEURS (Quand exécuter ce workflow?)
+# ============================================
+on:
+  push:
+    branches:
+      - main          # À chaque push sur main
+      - develop       # À chaque push sur develop (si tu utilises cette branche)
+  pull_request:
+    branches:
+      - main          # À chaque PR vers main
+
+# ============================================
+# PERMISSIONS
+# ============================================
+permissions:
+  contents: read      # Lecture seule (bonne pratique de sécurité)
+
+# ============================================
+# JOBS (Les tâches à exécuter)
+# ============================================
+jobs:
+  # ----- Job 1 : Linting -----
+  lint:
+    name: "🧹 Lint with Ruff"
+    runs-on: ubuntu-latest    # Exécute sur une machine Ubuntu
+    
+    steps:
+      # Étape 1 : Récupérer le code
+      - name: "📥 Checkout code"
+        uses: actions/checkout@v4
+      
+      # Étape 2 : Installer Python
+      - name: "🐍 Setup Python"
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"        # Cache les dépendances pour aller plus vite
+      
+      # Étape 3 : Installer les dépendances de dev
+      - name: "📦 Install dependencies"
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-dev.txt
+          pip install -r requirements.txt
+      
+      # Étape 4 : Exécuter Ruff (lint)
+      - name: "🔍 Run Ruff linter"
+        run: ruff check .
+      
+      # Étape 5 : Exécuter Ruff (vérification du format)
+      - name: "📐 Check formatting"
+        run: ruff format --check .
+
+  # ----- Job 2 : Sécurité -----
+  security:
+    name: "🔒 Security Check"
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: "📥 Checkout code"
+        uses: actions/checkout@v4
+      
+      - name: "🐍 Setup Python"
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+      
+      - name: "📦 Install dependencies"
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-dev.txt
+          pip install -r requirements.txt
+      
+      # Bandit : détecte les vulnérabilités dans le code
+      - name: "🛡️ Run Bandit"
+        run: bandit -r . -x ./venv,./tests -f json -o bandit-report.json || true
+        continue-on-error: true  # Ne bloque pas le pipeline
+      
+      # Safety : vérifie les dépendances connues pour être vulnérables
+      - name: "🛡️ Run Safety"
+        run: safety check --json || true
+        continue-on-error: true  # Ne bloque pas le pipeline (pour l'instant)
