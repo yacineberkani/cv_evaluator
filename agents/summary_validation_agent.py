@@ -4,8 +4,9 @@ SummaryValidationAgent - Validates resume/profile claims against experience evid
 
 import json
 import logging
+
 from agents.base_agent import BaseAgent
-from models.schemas import SummaryValidationOutput, ExperienceAnalysisOutput
+from models.schemas import ExperienceAnalysisOutput, SummaryValidationOutput
 from prompts.templates import SUMMARY_VALIDATION_PROMPT
 
 logger = logging.getLogger(__name__)

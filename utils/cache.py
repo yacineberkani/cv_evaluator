@@ -3,19 +3,19 @@ Caching utility for intermediate agent results.
 Avoids redundant API calls during the evaluation pipeline.
 """
 
-import json
 import hashlib
+import json
 import os
 import time
-from typing import Any, Optional, Dict
+from typing import Any
 
 
 class ResultCache:
     """In-memory + optional file-based cache for agent results."""
 
-    def __init__(self, cache_dir: Optional[str] = None):
-        self._memory: Dict[str, Any] = {}
-        self._timestamps: Dict[str, float] = {}
+    def __init__(self, cache_dir: str | None = None):
+        self._memory: dict[str, Any] = {}
+        self._timestamps: dict[str, float] = {}
         self.cache_dir = cache_dir
         if cache_dir:
             os.makedirs(cache_dir, exist_ok=True)
@@ -26,7 +26,7 @@ class ResultCache:
     def _hash_input(self, input_data: str) -> str:
         return hashlib.sha256(input_data.encode("utf-8")).hexdigest()[:16]
 
-    def get(self, agent_name: str, input_data: str) -> Optional[Any]:
+    def get(self, agent_name: str, input_data: str) -> Any | None:
         """Retrieve cached result for an agent given input data."""
         key = self._make_key(agent_name, self._hash_input(input_data))
 
@@ -39,11 +39,11 @@ class ResultCache:
             filepath = os.path.join(self.cache_dir, f"{key}.json")
             if os.path.exists(filepath):
                 try:
-                    with open(filepath, "r", encoding="utf-8") as f:
+                    with open(filepath, encoding="utf-8") as f:
                         data = json.load(f)
                     self._memory[key] = data
                     return data
-                except (json.JSONDecodeError, IOError):
+                except (OSError, json.JSONDecodeError):
                     pass
 
         return None
@@ -63,7 +63,7 @@ class ResultCache:
                         json.dump({"raw": result}, f, ensure_ascii=False, indent=2)
                     else:
                         json.dump(result, f, ensure_ascii=False, indent=2)
-            except (IOError, TypeError):
+            except (OSError, TypeError):
                 pass
 
     def clear(self) -> None:
@@ -75,9 +75,11 @@ class ResultCache:
                 if f.endswith(".json"):
                     os.remove(os.path.join(self.cache_dir, f))
 
-    def get_stats(self) -> Dict[str, Any]:
+    def get_stats(self) -> dict[str, Any]:
         """Return cache statistics."""
         return {
             "entries": len(self._memory),
-            "agents_cached": list(set(k.rsplit("_", 1)[0] for k in self._memory.keys())),
+            "agents_cached": list(
+                set(k.rsplit("_", 1)[0] for k in self._memory.keys())
+            ),
         }

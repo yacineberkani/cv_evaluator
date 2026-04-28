@@ -1,21 +1,23 @@
-
 """
 CV Evaluator - Multi-Agent Streamlit Application
 Main entry point for the CV evaluation system.
 """
 
-import streamlit as st
 import json
+import logging
 import os
 import sys
-import logging
 import warnings
 from datetime import datetime
+
+import streamlit as st
 from dotenv import load_dotenv
 
 # ── Setup ──
 load_dotenv()
-logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s"
+)
 logger = logging.getLogger(__name__)
 
 # Suppress urllib3/requests compatibility warnings
@@ -24,9 +26,9 @@ warnings.filterwarnings("ignore", category=ImportWarning, module="requests")
 # Add project root to path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from utils.pdf_parser import extract_text_from_uploaded_file
-from orchestrator import CVEvaluationOrchestrator
 from models.schemas import FinalReport
+from orchestrator import CVEvaluationOrchestrator
+from utils.pdf_parser import extract_text_from_uploaded_file
 
 # ── Page config ──
 st.set_page_config(
@@ -37,7 +39,8 @@ st.set_page_config(
 )
 
 # ── Custom CSS ──
-st.markdown("""
+st.markdown(
+    """
 <style>
     /* ── Global fonts & base ── */
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
@@ -258,17 +261,23 @@ st.markdown("""
     }
     .reset-banner .label { font-size: 0.9rem; font-weight: 500; color: #795548; }
 </style>
-""", unsafe_allow_html=True)
+""",
+    unsafe_allow_html=True,
+)
 
 
 # ══════════════════════════════════════════════
 # HELPERS
 # ══════════════════════════════════════════════
 
+
 def get_score_class(score_100: float) -> str:
-    if score_100 >= 75: return "score-excellent"
-    if score_100 >= 55: return "score-good"
-    if score_100 >= 35: return "score-average"
+    if score_100 >= 75:
+        return "score-excellent"
+    if score_100 >= 55:
+        return "score-good"
+    if score_100 >= 35:
+        return "score-average"
     return "score-low"
 
 
@@ -340,13 +349,13 @@ BAREME = [
 ]
 
 ALL_LEVELS = [
-    (0,  10, "Inexploitable",    "🚫", "#c62828"),
+    (0, 10, "Inexploitable", "🚫", "#c62828"),
     (11, 12, "Très insuffisant", "❌", "#e53935"),
-    (13, 14, "Insuffisant",      "⚠️", "#f4511e"),
-    (15, 16, "Correct",          "📋", "#fb8c00"),
-    (17, 17, "Bon",              "👍", "#1e88e5"),
-    (18, 19, "Très bon",         "🌟", "#43a047"),
-    (20, 20, "Excellent",        "🏆", "#8e24aa"),
+    (13, 14, "Insuffisant", "⚠️", "#f4511e"),
+    (15, 16, "Correct", "📋", "#fb8c00"),
+    (17, 17, "Bon", "👍", "#1e88e5"),
+    (18, 19, "Très bon", "🌟", "#43a047"),
+    (20, 20, "Excellent", "🏆", "#8e24aa"),
 ]
 
 
@@ -381,8 +390,10 @@ def reset_evaluation():
 # LAYOUT COMPONENTS
 # ══════════════════════════════════════════════
 
+
 def render_header():
-    st.markdown("""
+    st.markdown(
+        """
     <style>
         /* Animation de clignotement */
         @keyframes blinker {
@@ -426,17 +437,22 @@ def render_header():
             <span class="badge">🔗 LangChainc</span>
         </div>
     </div>
-    """, unsafe_allow_html=True)
+    """,
+        unsafe_allow_html=True,
+    )
 
 
 def render_sidebar():
     with st.sidebar:
-        st.markdown("""
+        st.markdown(
+            """
         <div style="text-align:center;padding:1rem 0 .5rem;">
             <img src="https://img.icons8.com/fluency/96/artificial-intelligence.png" width="56">
             <div style="font-size:1.1rem;font-weight:700;color:#1a1a2e;margin-top:.4rem;">Configuration</div>
         </div>
-        """, unsafe_allow_html=True)
+        """,
+            unsafe_allow_html=True,
+        )
 
         st.divider()
 
@@ -449,14 +465,16 @@ def render_sidebar():
 
         if use_ollama:
             # Ollama Cloud models available
-         
+
             model = st.selectbox(
                 "🤖 Modèle Ollama Cloud",
-                ["gpt-oss:20b-cloud","gpt-oss:120b-cloud","gemma4:31b-cloud"],
+                ["gpt-oss:20b-cloud", "gpt-oss:120b-cloud", "gemma4:31b-cloud"],
                 index=0,
                 help="Modèles open-source accessibles via l'API Ollama Cloud",
             )
-            api_key = ""  # No API key needed for Ollama Cloud (uses default embedded key)
+            api_key = (
+                ""  # No API key needed for Ollama Cloud (uses default embedded key)
+            )
             st.info("🔑 Clé API Ollama incluse automatiquement")
         else:
             # ── Mode Premium (Gemini / OpenAI) ──
@@ -469,7 +487,21 @@ def render_sidebar():
 
             model = st.selectbox(
                 "🤖 Modèle Gemini & OpenAI",
-                ["gemini-2.5-flash-lite", "gemini-2.5-flash", "gemini-2.5-pro","gpt-5", "gpt-5-mini", "gpt-5-nano", "gpt-4o", "gpt-4o-mini", "gpt-4.1", "gpt-4.1-mini", "gpt-4.1-nano", "gpt-4-turbo", "gpt-4"],
+                [
+                    "gemini-2.5-flash-lite",
+                    "gemini-2.5-flash",
+                    "gemini-2.5-pro",
+                    "gpt-5",
+                    "gpt-5-mini",
+                    "gpt-5-nano",
+                    "gpt-4o",
+                    "gpt-4o-mini",
+                    "gpt-4.1",
+                    "gpt-4.1-mini",
+                    "gpt-4.1-nano",
+                    "gpt-4-turbo",
+                    "gpt-4",
+                ],
                 index=0,
                 help="Flash = rapide & économique · Pro = plus précis",
             )
@@ -484,19 +516,28 @@ def render_sidebar():
 # RESULT RENDERERS
 # ══════════════════════════════════════════════
 
+
 def _bareme_color(note_20: float) -> str:
     """Return the exact hex color for a /20 score per the barème."""
     n = round(note_20)
-    if n <= 10:  return "#c62828"   # Rouge — Inexploitable
-    if n <= 12:  return "#e53935"   # Rouge-orange — Très insuffisant
-    if n <= 14:  return "#f4511e"   # Orange — Insuffisant
-    if n <= 16:  return "#7cb342"   # Vert clair — Correct
-    if n == 17:  return "#388e3c"   # Vert moyen — Bon
-    if n <= 19:  return "#2e7d32"   # Vert foncé — Très bon
-    return "#1b5e20"                # Vert très foncé — Excellent
+    if n <= 10:
+        return "#c62828"  # Rouge — Inexploitable
+    if n <= 12:
+        return "#e53935"  # Rouge-orange — Très insuffisant
+    if n <= 14:
+        return "#f4511e"  # Orange — Insuffisant
+    if n <= 16:
+        return "#7cb342"  # Vert clair — Correct
+    if n == 17:
+        return "#388e3c"  # Vert moyen — Bon
+    if n <= 19:
+        return "#2e7d32"  # Vert foncé — Très bon
+    return "#1b5e20"  # Vert très foncé — Excellent
 
 
-def _progress_ring_svg(value: float, max_val: float, label: str, sublabel: str, color: str, size: int = 160) -> str:
+def _progress_ring_svg(
+    value: float, max_val: float, label: str, sublabel: str, color: str, size: int = 160
+) -> str:
     """
     Generate an SVG animated progress ring.
     value   : raw score value
@@ -505,13 +546,13 @@ def _progress_ring_svg(value: float, max_val: float, label: str, sublabel: str, 
     sublabel: small text below (e.g. '/ 20')
     color   : stroke colour hex
     """
-    pct        = min(value / max_val, 1.0)
-    radius     = (size - 24) / 2
-    circ       = 2 * 3.14159 * radius
-    dash_val   = pct * circ
+    pct = min(value / max_val, 1.0)
+    radius = (size - 24) / 2
+    circ = 2 * 3.14159 * radius
+    dash_val = pct * circ
     track_color = "#e8eaf0"
-    cx = cy    = size / 2
-    anim_id    = f"anim_{label.replace('/','').replace(' ','')}"
+    cx = cy = size / 2
+    anim_id = f"anim_{label.replace('/', '').replace(' ', '')}"
 
     return f"""
 <svg width="{size}" height="{size}" viewBox="0 0 {size} {size}" xmlns="http://www.w3.org/2000/svg">
@@ -553,11 +594,11 @@ def _progress_ring_svg(value: float, max_val: float, label: str, sublabel: str, 
 
 
 def render_scores(report: FinalReport):
-    scoring    = report.scoring
-    score_20   = scoring.note_finale_sur_20
-    score_10   = scoring.note_finale_sur_10
-    score_100  = scoring.note_finale_sur_100
-    bareme     = get_bareme(score_20)
+    scoring = report.scoring
+    score_20 = scoring.note_finale_sur_20
+    score_10 = scoring.note_finale_sur_10
+    score_100 = scoring.note_finale_sur_100
+    bareme = get_bareme(score_20)
     ring_color = _bareme_color(score_20)
 
     # ── Section title ──
@@ -600,32 +641,36 @@ def render_scores(report: FinalReport):
         st.markdown(
             f'<div class="ring-wrapper">'
             f'<div class="ring-title">Score sur 10</div>'
-            f'{svg}'
+            f"{svg}"
             f'<div class="ring-badge" style="background:{ring_color};">{bareme["emoji"]} {bareme["label"]}</div>'
-            f'</div>',
+            f"</div>",
             unsafe_allow_html=True,
         )
 
     with c20:
-        svg = _progress_ring_svg(score_20, 20, f"{score_20:.1f}", "/ 20", ring_color, size=190)
+        svg = _progress_ring_svg(
+            score_20, 20, f"{score_20:.1f}", "/ 20", ring_color, size=190
+        )
         st.markdown(
             f'<div class="ring-wrapper" style="border:2px solid {ring_color}30;">'
             f'<div class="ring-title" style="color:{ring_color};">⭐ Score sur 20</div>'
-            f'{svg}'
+            f"{svg}"
             f'<div class="ring-badge" style="background:{ring_color};font-size:.9rem;padding:.35rem 1.1rem;">'
-            f'{bareme["emoji"]} {bareme["label"]}</div>'
-            f'</div>',
+            f"{bareme['emoji']} {bareme['label']}</div>"
+            f"</div>",
             unsafe_allow_html=True,
         )
 
     with c100:
-        svg = _progress_ring_svg(score_100, 100, f"{score_100:.0f}", "/ 100", ring_color)
+        svg = _progress_ring_svg(
+            score_100, 100, f"{score_100:.0f}", "/ 100", ring_color
+        )
         st.markdown(
             f'<div class="ring-wrapper">'
             f'<div class="ring-title">Score sur 100</div>'
-            f'{svg}'
+            f"{svg}"
             f'<div class="ring-badge" style="background:{ring_color};">{bareme["emoji"]} {bareme["label"]}</div>'
-            f'</div>',
+            f"</div>",
             unsafe_allow_html=True,
         )
 
@@ -635,11 +680,16 @@ def render_scores(report: FinalReport):
     col_rec, col_ver = st.columns(2)
 
     with col_rec:
-        rec       = report.quality_control.recommandation
+        rec = report.quality_control.recommandation
         rec_emoji = {"Oui": "✅", "Non": "❌", "Peut-être": "⚠️"}.get(rec, "❓")
-        rec_color = {"Oui": "#155724", "Non": "#721c24", "Peut-être": "#856404"}.get(rec, "#6c757d")
-        rec_bg    = {"Oui": "#d4edda", "Non": "#f8d7da", "Peut-être": "#fff3cd"}.get(rec, "#f0f2f8")
-        st.markdown(f"""
+        rec_color = {"Oui": "#155724", "Non": "#721c24", "Peut-être": "#856404"}.get(
+            rec, "#6c757d"
+        )
+        rec_bg = {"Oui": "#d4edda", "Non": "#f8d7da", "Peut-être": "#fff3cd"}.get(
+            rec, "#f0f2f8"
+        )
+        st.markdown(
+            f"""
         <div style="display:flex;align-items:center;gap:1rem;padding:1.1rem 1.4rem;
                     background:{rec_bg};border-radius:12px;border:1px solid {rec_color}30;">
             <span style="font-size:2rem;">{rec_emoji}</span>
@@ -649,14 +699,19 @@ def render_scores(report: FinalReport):
                 <div style="font-size:1.2rem;font-weight:800;color:{rec_color};">{rec}</div>
             </div>
         </div>
-        """, unsafe_allow_html=True)
+        """,
+            unsafe_allow_html=True,
+        )
 
     with col_ver:
         verdict_label = report.quality_control.verdict.replace("_", " ").title()
-        verdict_emoji = {"profil vendeur": "🌟", "profil banal": "😐", "profil intermediaire": "🤔"}.get(
-            report.quality_control.verdict.replace("_", " "), "❓"
-        )
-        st.markdown(f"""
+        verdict_emoji = {
+            "profil vendeur": "🌟",
+            "profil banal": "😐",
+            "profil intermediaire": "🤔",
+        }.get(report.quality_control.verdict.replace("_", " "), "❓")
+        st.markdown(
+            f"""
         <div style="display:flex;align-items:center;gap:1rem;padding:1.1rem 1.4rem;
                     background:#f5f6fa;border-radius:12px;border:1px solid #e0e2ea;">
             <span style="font-size:2rem;">{verdict_emoji}</span>
@@ -666,17 +721,23 @@ def render_scores(report: FinalReport):
                 <div style="font-size:1.2rem;font-weight:800;color:#1a1a2e;">{verdict_label}</div>
             </div>
         </div>
-        """, unsafe_allow_html=True)
+        """,
+            unsafe_allow_html=True,
+        )
 
     st.markdown("<br>", unsafe_allow_html=True)
 
     # ── Detail by criterion ──
-    st.markdown('<div class="section-title">📈 Détail par critère</div>', unsafe_allow_html=True)
+    st.markdown(
+        '<div class="section-title">📈 Détail par critère</div>', unsafe_allow_html=True
+    )
     cols = st.columns(4)
     for i, detail in enumerate(scoring.details):
         with cols[i]:
             pct = detail.score_brut * 10
-            bar_color = _bareme_color(detail.score_brut * 2)   # map /10 → /20 scale for colour
+            bar_color = _bareme_color(
+                detail.score_brut * 2
+            )  # map /10 → /20 scale for colour
             st.metric(
                 label=f"{detail.critere}",
                 value=f"{detail.score_brut}/10",
@@ -700,16 +761,27 @@ def render_scores(report: FinalReport):
 
 
 def render_evaluation_table(report: FinalReport):
-    st.markdown('<div class="section-title">📋 Tableau d\'Évaluation Détaillé</div>', unsafe_allow_html=True)
+    st.markdown(
+        '<div class="section-title">📋 Tableau d\'Évaluation Détaillé</div>',
+        unsafe_allow_html=True,
+    )
 
     table = report.evaluation_table
     if not table.lignes:
         st.warning("Aucune donnée dans le tableau d'évaluation.")
         return
 
-    headers = ["Élément", "Clarté", "Cohérence", "Qualité réd.", "Pertinence", "Respect règles", "Erreurs naïves"]
+    headers = [
+        "Élément",
+        "Clarté",
+        "Cohérence",
+        "Qualité réd.",
+        "Pertinence",
+        "Respect règles",
+        "Erreurs naïves",
+    ]
     header_row = "| " + " | ".join(headers) + " |"
-    separator  = "| " + " | ".join(["---"] * len(headers)) + " |"
+    separator = "| " + " | ".join(["---"] * len(headers)) + " |"
     rows = []
     for row in table.lignes:
         cells = [
@@ -729,14 +801,16 @@ def render_evaluation_table(report: FinalReport):
         for row in table.lignes:
             st.markdown(f"#### {row.element}")
             detail_cols = st.columns(6)
-            for j, (label, cell) in enumerate([
-                ("Clarté", row.clarte),
-                ("Cohérence", row.coherence),
-                ("Qualité réd.", row.qualite_redactionnelle),
-                ("Pertinence", row.pertinence),
-                ("Respect règles", row.respect_regles),
-                ("Erreurs naïves", row.erreurs_naives),
-            ]):
+            for j, (label, cell) in enumerate(
+                [
+                    ("Clarté", row.clarte),
+                    ("Cohérence", row.coherence),
+                    ("Qualité réd.", row.qualite_redactionnelle),
+                    ("Pertinence", row.pertinence),
+                    ("Respect règles", row.respect_regles),
+                    ("Erreurs naïves", row.erreurs_naives),
+                ]
+            ):
                 with detail_cols[j]:
                     st.markdown(f"**{label}** {cell.emoji}")
                     st.caption(cell.justification)
@@ -746,7 +820,10 @@ def render_evaluation_table(report: FinalReport):
 
 
 def render_experience_analysis(report: FinalReport):
-    st.markdown('<div class="section-title">🔍 Analyse des Expériences</div>', unsafe_allow_html=True)
+    st.markdown(
+        '<div class="section-title">🔍 Analyse des Expériences</div>',
+        unsafe_allow_html=True,
+    )
     exp = report.experience_analysis
 
     c1, c2 = st.columns([1, 3])
@@ -772,9 +849,12 @@ def render_experience_analysis(report: FinalReport):
     for e in exp.experiences:
         with st.expander(f"💼 {e.poste} @ {e.entreprise} — {e.score}/10"):
             cols = st.columns([1, 1, 1])
-            with cols[0]: st.markdown(f"📅 **Période :** {e.periode}")
-            with cols[1]: st.markdown(f"⏱️ **Durée :** {e.duree_estimee or 'non précisée'}")
-            with cols[2]: st.metric("Score", f"{e.score}/10")
+            with cols[0]:
+                st.markdown(f"📅 **Période :** {e.periode}")
+            with cols[1]:
+                st.markdown(f"⏱️ **Durée :** {e.duree_estimee or 'non précisée'}")
+            with cols[2]:
+                st.metric("Score", f"{e.score}/10")
 
             st.markdown(f"**Contexte métier :** {e.contexte_metier}")
             st.markdown(f"**Cohérence technique :** {e.coherence_technique}")
@@ -799,7 +879,10 @@ def render_experience_analysis(report: FinalReport):
 
 
 def render_skills_education(report: FinalReport):
-    st.markdown('<div class="section-title">🎯 Compétences & Formations</div>', unsafe_allow_html=True)
+    st.markdown(
+        '<div class="section-title">🎯 Compétences & Formations</div>',
+        unsafe_allow_html=True,
+    )
     se = report.skills_education
 
     col1, col2 = st.columns(2)
@@ -809,7 +892,7 @@ def render_skills_education(report: FinalReport):
         st.metric("Score Formations", f"{se.score_formations}/10")
 
     st.markdown("#### 🛠️ Compétences")
-    demonstrated     = [c for c in se.competences if c.demontree_dans_experience]
+    demonstrated = [c for c in se.competences if c.demontree_dans_experience]
     not_demonstrated = [c for c in se.competences if not c.demontree_dans_experience]
 
     if demonstrated:
@@ -834,7 +917,10 @@ def render_skills_education(report: FinalReport):
 
 
 def render_summary_validation(report: FinalReport):
-    st.markdown('<div class="section-title">✅ Validation du Résumé / Profil</div>', unsafe_allow_html=True)
+    st.markdown(
+        '<div class="section-title">✅ Validation du Résumé / Profil</div>',
+        unsafe_allow_html=True,
+    )
     sv = report.summary_validation
 
     col1, col2, col3 = st.columns(3)
@@ -843,7 +929,7 @@ def render_summary_validation(report: FinalReport):
     with col2:
         st.metric("Affirmations prouvées", f"{sv.taux_affirmations_prouvees:.0f}%")
     with col3:
-        total  = len(sv.affirmations_analysees)
+        total = len(sv.affirmations_analysees)
         proven = sum(1 for a in sv.affirmations_analysees if a.prouvee)
         st.metric("Ratio", f"{proven}/{total}")
 
@@ -860,7 +946,7 @@ def render_summary_validation(report: FinalReport):
 
     st.markdown("#### 📝 Analyse des affirmations")
     for a in sv.affirmations_analysees:
-        icon  = "✅" if a.prouvee else "❌"
+        icon = "✅" if a.prouvee else "❌"
         label = a.affirmation[:80] + "…" if len(a.affirmation) > 80 else a.affirmation
         with st.expander(f"{icon} « {label} »"):
             st.markdown(f"**Prouvée :** {'Oui ✅' if a.prouvee else 'Non ❌'}")
@@ -870,23 +956,34 @@ def render_summary_validation(report: FinalReport):
 
 
 def render_quality_control(report: FinalReport):
-    st.markdown('<div class="section-title">🏁 Contrôle Qualité Final</div>', unsafe_allow_html=True)
+    st.markdown(
+        '<div class="section-title">🏁 Contrôle Qualité Final</div>',
+        unsafe_allow_html=True,
+    )
     qc = report.quality_control
 
-    verdict_class = {"Oui": "verdict-oui", "Non": "verdict-non", "Peut-être": "verdict-maybe"}.get(
-        qc.recommandation, "verdict-maybe"
-    )
-    st.markdown(f"""
+    verdict_class = {
+        "Oui": "verdict-oui",
+        "Non": "verdict-non",
+        "Peut-être": "verdict-maybe",
+    }.get(qc.recommandation, "verdict-maybe")
+    st.markdown(
+        f"""
     <div class="verdict-box {verdict_class}">
         <h3 style="margin:0 0 .4rem 0;">Recommandation : {qc.recommandation}</h3>
         <p style="margin:0;">{qc.justification_recommandation}</p>
     </div>
-    """, unsafe_allow_html=True)
+    """,
+        unsafe_allow_html=True,
+    )
 
     c1, c2, c3 = st.columns(3)
-    with c1: st.markdown(f"**Verdict :** {qc.verdict.replace('_', ' ').title()}")
-    with c2: st.markdown(f"**Alignement global :** {qc.alignement_global}")
-    with c3: st.metric("Score Alignement", f"{qc.score_alignement}/10")
+    with c1:
+        st.markdown(f"**Verdict :** {qc.verdict.replace('_', ' ').title()}")
+    with c2:
+        st.markdown(f"**Alignement global :** {qc.alignement_global}")
+    with c3:
+        st.metric("Score Alignement", f"{qc.score_alignement}/10")
 
     st.markdown(f"**Justification :** {qc.justification_verdict}")
 
@@ -901,19 +998,30 @@ def render_quality_control(report: FinalReport):
             st.markdown(f"- 🔴 {f}")
 
     with st.expander("📋 Éléments vérifiés"):
-        quality_colors = {"excellent": "🟢", "bon": "🔵", "moyen": "🟡", "faible": "🟠", "absent": "🔴"}
+        quality_colors = {
+            "excellent": "🟢",
+            "bon": "🔵",
+            "moyen": "🟡",
+            "faible": "🟠",
+            "absent": "🔴",
+        }
         for item in qc.elements_verifies:
-            icon    = "✅" if item.present else "❌"
+            icon = "✅" if item.present else "❌"
             q_emoji = quality_colors.get(item.qualite, "⚪")
-            st.markdown(f"{icon} **{item.element}** — {q_emoji} {item.qualite.title()} : {item.commentaire}")
+            st.markdown(
+                f"{icon} **{item.element}** — {q_emoji} {item.qualite.title()} : {item.commentaire}"
+            )
 
 
 def render_export_section(report: FinalReport):
     """Render the Export tab with JSON download and CV text download."""
-    st.markdown('<div class="section-title">📥 Export & Téléchargements</div>', unsafe_allow_html=True)
+    st.markdown(
+        '<div class="section-title">📥 Export & Téléchargements</div>',
+        unsafe_allow_html=True,
+    )
 
     report_json = report.model_dump_json(indent=2)
-    timestamp   = datetime.now().strftime("%Y%m%d_%H%M%S")
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
     col_json, col_txt, col_preview = st.columns([1, 1, 1])
 
@@ -958,12 +1066,15 @@ def render_export_section(report: FinalReport):
 # MAIN APPLICATION
 # ══════════════════════════════════════════════
 
+
 def main():
     render_header()
     api_key, model, use_ollama = render_sidebar()
 
     # ── Upload section ──
-    st.markdown('<div class="section-title">📤 Importer un CV</div>', unsafe_allow_html=True)
+    st.markdown(
+        '<div class="section-title">📤 Importer un CV</div>', unsafe_allow_html=True
+    )
 
     # If a previous result exists, show a reset banner at the top
     if "report" in st.session_state:
@@ -973,13 +1084,17 @@ def main():
             st.markdown(
                 f'<div class="reset-banner">'
                 f'<span class="label">📌 Résultat actuel : <strong>{fname}</strong> — '
-                f'Pour analyser un nouveau CV, réinitialisez d\'abord.</span>'
-                f'</div>',
+                f"Pour analyser un nouveau CV, réinitialisez d'abord.</span>"
+                f"</div>",
                 unsafe_allow_html=True,
             )
         with reset_col2:
-            if st.button("🔄 Réinitialiser", type="secondary", use_container_width=True,
-                         help="Efface les résultats et permet de déposer un nouveau CV"):
+            if st.button(
+                "🔄 Réinitialiser",
+                type="secondary",
+                use_container_width=True,
+                help="Efface les résultats et permet de déposer un nouveau CV",
+            ):
                 reset_evaluation()
                 st.rerun()
 
@@ -1002,20 +1117,24 @@ def main():
             f'<span class="icon">📄</span>'
             f'<div><div class="name">{uploaded_file.name}</div>'
             f'<div class="size">{uploaded_file.size / 1024:.1f} Ko · PDF</div></div>'
-            f'</div>',
+            f"</div>",
             unsafe_allow_html=True,
         )
 
         # API key validation: required for Gemini/OpenAI, not for Ollama Cloud
         if not use_ollama and not api_key:
-            st.error("⚠️ Veuillez entrer votre clé API Gemini/OpenAI dans la barre latérale.")
+            st.error(
+                "⚠️ Veuillez entrer votre clé API Gemini/OpenAI dans la barre latérale."
+            )
             return
 
         # ── Evaluate button ──
         if "report" not in st.session_state:
-            if st.button("🚀 Lancer l'évaluation", type="primary", use_container_width=True):
+            if st.button(
+                "🚀 Lancer l'évaluation", type="primary", use_container_width=True
+            ):
                 progress_bar = st.progress(0)
-                status_box   = st.empty()
+                status_box = st.empty()
 
                 def progress_callback(message: str, percentage: float):
                     progress_bar.progress(min(percentage, 1.0))
@@ -1030,15 +1149,22 @@ def main():
                             # Handle custom PDFExtractionError with user-friendly message
                             error_msg = str(e)
                             if "vide" in error_msg.lower():
-                                st.error("❌ Le PDF est vide. Veuillez vérifier le fichier.")
-                            elif "scanné" in error_msg.lower() or "image" in error_msg.lower():
+                                st.error(
+                                    "❌ Le PDF est vide. Veuillez vérifier le fichier."
+                                )
+                            elif (
+                                "scanné" in error_msg.lower()
+                                or "image" in error_msg.lower()
+                            ):
                                 st.error(
                                     "❌ Le PDF semble être une image scannée. "
                                     "Le texte ne peut pas être extrait. "
                                     "Utilisez un PDF avec du texte sélectionnable."
                                 )
                             else:
-                                st.error(f"❌ Erreur lors de la lecture du PDF : {error_msg}")
+                                st.error(
+                                    f"❌ Erreur lors de la lecture du PDF : {error_msg}"
+                                )
                             return
 
                     if len(cv_text.strip()) < 100:
@@ -1082,7 +1208,7 @@ def main():
                     report = orchestrator.evaluate(cv_text)
 
                     # Persist results
-                    st.session_state["report"]             = report
+                    st.session_state["report"] = report
                     st.session_state["evaluated_filename"] = uploaded_file.name
 
                     progress_bar.progress(1.0)
@@ -1092,11 +1218,17 @@ def main():
                     error_msg = str(e)
                     # User-friendly error messages
                     if "API" in error_msg or "api" in error_msg.lower():
-                        st.error("❌ Erreur de connexion à l'API. Vérifiez votre clé API et votre connexion internet.")
+                        st.error(
+                            "❌ Erreur de connexion à l'API. Vérifiez votre clé API et votre connexion internet."
+                        )
                     elif "timeout" in error_msg.lower():
-                        st.error("⏱️ La requête a expiré. Le modèle est peut-être surchargé. Réessayez dans quelques instants.")
+                        st.error(
+                            "⏱️ La requête a expiré. Le modèle est peut-être surchargé. Réessayez dans quelques instants."
+                        )
                     elif "JSON" in error_msg or "parsing" in error_msg.lower():
-                        st.error("🔧 Erreur d'analyse de la réponse IA. Le modèle a renvoyé un format invalide. Réessayez.")
+                        st.error(
+                            "🔧 Erreur d'analyse de la réponse IA. Le modèle a renvoyé un format invalide. Réessayez."
+                        )
                     else:
                         st.error(f"❌ Erreur lors de l'évaluation : {error_msg}")
                     logger.error(f"[App] Evaluation error: {error_msg}", exc_info=True)
@@ -1109,7 +1241,8 @@ def main():
         # ══════════════════════════════════════════════
         # NEW EVALUATION SECTION - Prominent CTA
         # ══════════════════════════════════════════════
-        st.markdown("""
+        st.markdown(
+            """
         <style>
             .new-eval-section {
                 display: flex;
@@ -1149,16 +1282,21 @@ def main():
                 box-shadow: 0 6px 20px rgba(79,110,247,0.4);
             }
         </style>
-        """, unsafe_allow_html=True)
+        """,
+            unsafe_allow_html=True,
+        )
 
-        st.markdown("""
+        st.markdown(
+            """
         <div class="new-eval-section">
             <div class="new-eval-text">
                 <h3>✨ Évaluation terminée !</h3>
                 <p>Souhaitez-vous analyser un nouveau CV ?</p>
             </div>
         </div>
-        """, unsafe_allow_html=True)
+        """,
+            unsafe_allow_html=True,
+        )
 
         # Full-width button for new evaluation
         if st.button(
@@ -1166,7 +1304,7 @@ def main():
             type="primary",
             use_container_width=True,
             help="Réinitialiser tous les résultats et commencer une nouvelle évaluation",
-            key="new_evaluation_btn"
+            key="new_evaluation_btn",
         ):
             reset_evaluation()
             st.rerun()
@@ -1181,7 +1319,7 @@ def main():
             st.caption(f"📅 {meta.get('date_evaluation', 'N/A')}")
 
             # Display provider badge
-            model_name = meta.get('modele_llm', 'N/A')
+            model_name = meta.get("modele_llm", "N/A")
             provider_badge = ""
             if model_name.endswith("-cloud") or "ollama" in model_name.lower():
                 provider_badge = "🆓 Ollama Cloud"
@@ -1191,7 +1329,9 @@ def main():
                 provider_badge = "🔵 OpenAI"
 
             st.caption(f"🤖 {model_name}")
-            st.markdown(f"<span class='chip'>{provider_badge}</span>", unsafe_allow_html=True)
+            st.markdown(
+                f"<span class='chip'>{provider_badge}</span>", unsafe_allow_html=True
+            )
             st.caption(f"⏱️ {meta.get('duree_evaluation_secondes', 'N/A')} s")
             st.caption(f"📂 {', '.join(meta.get('sections_detectees', []))}")
 
@@ -1202,30 +1342,38 @@ def main():
                 type="secondary",
                 use_container_width=True,
                 help="Supprimer les résultats actuels",
-                key="sidebar_reset_btn"
+                key="sidebar_reset_btn",
             ):
                 reset_evaluation()
                 st.rerun()
 
-        tabs = st.tabs([
-            "📊 Scores",
-            "📋 Tableau",
-            "🔍 Expériences",
-            "🎯 Compétences",
-            "✅ Résumé",
-            "🏁 Qualité",
-            "📥 Export",
-        ])
+        tabs = st.tabs(
+            [
+                "📊 Scores",
+                "📋 Tableau",
+                "🔍 Expériences",
+                "🎯 Compétences",
+                "✅ Résumé",
+                "🏁 Qualité",
+                "📥 Export",
+            ]
+        )
 
-        with tabs[0]: render_scores(report)
-        with tabs[1]: render_evaluation_table(report)
-        with tabs[2]: render_experience_analysis(report)
-        with tabs[3]: render_skills_education(report)
-        with tabs[4]: render_summary_validation(report)
-        with tabs[5]: render_quality_control(report)
-        with tabs[6]: render_export_section(report)
+        with tabs[0]:
+            render_scores(report)
+        with tabs[1]:
+            render_evaluation_table(report)
+        with tabs[2]:
+            render_experience_analysis(report)
+        with tabs[3]:
+            render_skills_education(report)
+        with tabs[4]:
+            render_summary_validation(report)
+        with tabs[5]:
+            render_quality_control(report)
+        with tabs[6]:
+            render_export_section(report)
 
 
 if __name__ == "__main__":
     main()
-

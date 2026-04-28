@@ -9,32 +9,29 @@ Architecture:
     Phase 4 (depends on all): QualityControlAgent + TableGeneratorAgent  (parallel)
 """
 
-import json
 import logging
 import time
-from datetime import datetime, timezone
-from typing import Optional, Callable
+from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from datetime import datetime, timezone
 
-from models.schemas import (
-    ExperienceAnalysisOutput,
-    SkillsEducationOutput,
-    SummaryValidationOutput,
-    ScoringOutput,
-    QualityControlOutput,
-    TableGeneratorOutput,
-    FinalReport,
-)
 from agents import (
     ExperienceAnalysisAgent,
+    QualityControlAgent,
+    ScoringAgent,
     SkillsEducationAgent,
     SummaryValidationAgent,
-    ScoringAgent,
-    QualityControlAgent,
     TableGeneratorAgent,
 )
-from utils.chunking import chunk_cv_by_sections, get_section_or_full
+from models.schemas import (
+    FinalReport,
+    QualityControlOutput,
+    SkillsEducationOutput,
+    SummaryValidationOutput,
+    TableGeneratorOutput,
+)
 from utils.cache import ResultCache
+from utils.chunking import chunk_cv_by_sections, get_section_or_full
 
 logger = logging.getLogger(__name__)
 
@@ -62,8 +59,8 @@ class CVEvaluationOrchestrator:
         self,
         api_key: str,
         model_name: str = "gemini-1.5-flash",
-        cache_dir: Optional[str] = None,
-        progress_callback: Optional[Callable[[str, float], None]] = None,
+        cache_dir: str | None = None,
+        progress_callback: Callable[[str, float], None] | None = None,
     ):
         self.api_key = api_key
         self.model_name = model_name
@@ -71,7 +68,9 @@ class CVEvaluationOrchestrator:
         self.cache = ResultCache(cache_dir=cache_dir)
         self.progress_callback = progress_callback or (lambda msg, pct: None)
 
-        logger.info(f"[Orchestrator] Provider detected: '{self.provider}' for model '{model_name}'")
+        logger.info(
+            f"[Orchestrator] Provider detected: '{self.provider}' for model '{model_name}'"
+        )
 
         # ✅ provider is now passed to every agent
         agent_kwargs = {
@@ -130,8 +129,8 @@ class CVEvaluationOrchestrator:
             0.30,
         )
 
-        skills_result: Optional[SkillsEducationOutput] = None
-        summary_result: Optional[SummaryValidationOutput] = None
+        skills_result: SkillsEducationOutput | None = None
+        summary_result: SummaryValidationOutput | None = None
 
         with ThreadPoolExecutor(max_workers=2) as executor:
             future_skills = executor.submit(
@@ -172,8 +171,8 @@ class CVEvaluationOrchestrator:
             0.75,
         )
 
-        quality_result: Optional[QualityControlOutput] = None
-        table_result: Optional[TableGeneratorOutput] = None
+        quality_result: QualityControlOutput | None = None
+        table_result: TableGeneratorOutput | None = None
 
         with ThreadPoolExecutor(max_workers=2) as executor:
             future_quality = executor.submit(

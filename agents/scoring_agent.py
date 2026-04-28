@@ -2,8 +2,8 @@
 ScoringAgent - Calculates weighted scores according to the strict formula.
 """
 
-import json
 import logging
+
 from agents.base_agent import BaseAgent
 from models.schemas import ScoringOutput
 from prompts.templates import SCORING_PROMPT

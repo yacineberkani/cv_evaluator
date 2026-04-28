@@ -4,13 +4,14 @@ QualityControlAgent - Final quality assessment and verdict.
 
 import json
 import logging
+
 from agents.base_agent import BaseAgent
 from models.schemas import (
-    QualityControlOutput,
     ExperienceAnalysisOutput,
+    QualityControlOutput,
+    ScoringOutput,
     SkillsEducationOutput,
     SummaryValidationOutput,
-    ScoringOutput,
 )
 from prompts.templates import QUALITY_CONTROL_PROMPT
 

@@ -3,6 +3,7 @@ ExperienceAnalysisAgent - Extracts and evaluates each professional experience.
 """
 
 import logging
+
 from agents.base_agent import BaseAgent
 from models.schemas import ExperienceAnalysisOutput
 from prompts.templates import EXPERIENCE_ANALYSIS_PROMPT

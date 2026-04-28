@@ -35,10 +35,9 @@ Nouvelle API
 
 from __future__ import annotations
 
-import re
 import logging
+import re
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Tuple
 
 logger = logging.getLogger(__name__)
 
@@ -50,7 +49,7 @@ MAX_CHARS: int = int(MAX_TOKENS_PER_CHUNK * CHARS_PER_TOKEN)
 OVERLAP_CHARS: int = int(OVERLAP_TOKENS * CHARS_PER_TOKEN)
 
 # ── Section vocabulary (FR + EN) ─────────────────────────────────────────────
-SECTION_PATTERNS: Dict[str, List[str]] = {
+SECTION_PATTERNS: dict[str, list[str]] = {
     "resume": [
         r"(?i)(profil\s*pro|profil\s*candidat|résumé\s*pro|summary|about\s*me"
         r"|à\s*propos|objectif(\s*(pro|career))?|présentation|introduction"
@@ -93,9 +92,11 @@ REQUIRED_SECTIONS = {"resume", "experiences", "competences", "formations"}
 
 # ── Core data structures ──────────────────────────────────────────────────────
 
+
 @dataclass
 class Chunk:
     """A single text chunk with metadata."""
+
     section: str
     index: int
     total_chunks: int
@@ -124,9 +125,10 @@ class Chunk:
 @dataclass
 class CVSections:
     """Container returned by chunk_cv()."""
-    chunks_by_section: Dict[str, List[Chunk]] = field(default_factory=dict)
+
+    chunks_by_section: dict[str, list[Chunk]] = field(default_factory=dict)
     full_text: str = ""
-    detected_sections: List[str] = field(default_factory=list)
+    detected_sections: list[str] = field(default_factory=list)
 
     def get_section_text(
         self,
@@ -141,7 +143,7 @@ class CVSections:
             )
             return _window(self.full_text, max_tokens)
         budget = max_tokens
-        parts: List[str] = []
+        parts: list[str] = []
         for chunk in chunks:
             if budget <= 0:
                 break
@@ -152,7 +154,7 @@ class CVSections:
             result = _truncate(result, max_tokens)
         return result
 
-    def get_first_chunk(self, section: str) -> Optional[Chunk]:
+    def get_first_chunk(self, section: str) -> Chunk | None:
         chunks = self.chunks_by_section.get(section, [])
         return chunks[0] if chunks else None
 
@@ -164,9 +166,7 @@ class CVSections:
         for sec, chunks in self.chunks_by_section.items():
             total_tok = sum(c.token_estimate for c in chunks)
             overflow_tag = (
-                " [OVERFLOW → SPLIT]"
-                if any(c.is_overflow for c in chunks)
-                else ""
+                " [OVERFLOW → SPLIT]" if any(c.is_overflow for c in chunks) else ""
             )
             lines.append(
                 f"  {sec:<20} {len(chunks)} chunk(s)  ~{total_tok} tokens{overflow_tag}"
@@ -175,6 +175,7 @@ class CVSections:
 
 
 # ── Public API ────────────────────────────────────────────────────────────────
+
 
 def chunk_cv(full_text: str) -> CVSections:
     """
@@ -244,7 +245,7 @@ def chunk_cv(full_text: str) -> CVSections:
 def get_best_chunks_for_agent(
     cv: CVSections,
     primary_section: str,
-    context_sections: Optional[List[str]] = None,
+    context_sections: list[str] | None = None,
     agent_token_budget: int = MAX_TOKENS_PER_CHUNK * 2,
 ) -> str:
     """
@@ -252,14 +253,14 @@ def get_best_chunks_for_agent(
     primary_section fills the budget first; context_sections are appended
     in order until the budget is exhausted.
     """
-    parts: List[str] = []
+    parts: list[str] = []
     remaining = agent_token_budget
 
     primary_text = cv.get_section_text(primary_section, max_tokens=remaining)
     parts.append(primary_text)
     remaining -= _tokens(primary_text)
 
-    for ctx_sec in (context_sections or []):
+    for ctx_sec in context_sections or []:
         if remaining <= 100:
             break
         ctx_text = cv.get_section_text(
@@ -273,20 +274,21 @@ def get_best_chunks_for_agent(
 
 # ── Backward-compatible interfaces ────────────────────────────────────────────
 
-def chunk_cv_by_sections(full_text: str) -> Dict[str, str]:
+
+def chunk_cv_by_sections(full_text: str) -> dict[str, str]:
     """
     Legacy dict interface used by the current orchestrator.
     Returns {section_name: joined_text, 'full_text': full_text}.
     """
     cv = chunk_cv(full_text)
-    out: Dict[str, str] = {"full_text": full_text}
+    out: dict[str, str] = {"full_text": full_text}
     for sec, chunks in cv.chunks_by_section.items():
         out[sec] = "\n\n".join(c.full_text for c in chunks)
     return out
 
 
 def get_section_or_full(
-    sections: Dict[str, str],
+    sections: dict[str, str],
     section_name: str,
     max_chars: int = MAX_CHARS,
 ) -> str:
@@ -301,6 +303,7 @@ def get_section_or_full(
 
 
 # ── Internal helpers ──────────────────────────────────────────────────────────
+
 
 def _tokens(text: str) -> int:
     return max(1, int(len(text) / CHARS_PER_TOKEN))
@@ -320,9 +323,9 @@ def _window(text: str, max_tokens: int) -> str:
     return _truncate(text, max_tokens)
 
 
-def _detect_boundaries(lines: List[str]) -> List[Tuple[int, str]]:
-    boundaries: List[Tuple[int, str]] = []
-    seen_at: Dict[str, int] = {}
+def _detect_boundaries(lines: list[str]) -> list[tuple[int, str]]:
+    boundaries: list[tuple[int, str]] = []
+    seen_at: dict[str, int] = {}
 
     for i, line in enumerate(lines):
         stripped = line.strip()
@@ -342,10 +345,10 @@ def _detect_boundaries(lines: List[str]) -> List[Tuple[int, str]]:
 
 
 def _slice_sections(
-    lines: List[str],
-    boundaries: List[Tuple[int, str]],
-) -> Dict[str, str]:
-    raw: Dict[str, str] = {}
+    lines: list[str],
+    boundaries: list[tuple[int, str]],
+) -> dict[str, str]:
+    raw: dict[str, str] = {}
     n = len(boundaries)
 
     for idx, (start_line, section_name) in enumerate(boundaries):
@@ -361,7 +364,7 @@ def _slice_sections(
     return raw
 
 
-def _adaptive_chunk(section_name: str, raw_text: str) -> List[Chunk]:
+def _adaptive_chunk(section_name: str, raw_text: str) -> list[Chunk]:
     """Split raw_text into Chunks, respecting MAX_CHARS."""
     if len(raw_text) <= MAX_CHARS:
         return [
@@ -377,7 +380,8 @@ def _adaptive_chunk(section_name: str, raw_text: str) -> List[Chunk]:
 
     logger.info(
         "[Chunking] Section '%s' (%d chars). Splitting adaptively.",
-        section_name, len(raw_text),
+        section_name,
+        len(raw_text),
     )
 
     if section_name == "experiences":
@@ -387,7 +391,7 @@ def _adaptive_chunk(section_name: str, raw_text: str) -> List[Chunk]:
 
     normalised = _normalise_blocks(blocks)
 
-    chunks: List[Chunk] = []
+    chunks: list[Chunk] = []
     prev_tail = ""
 
     for i, block in enumerate(normalised):
@@ -408,7 +412,7 @@ def _adaptive_chunk(section_name: str, raw_text: str) -> List[Chunk]:
     return chunks
 
 
-def _split_by_experience_blocks(text: str) -> List[str]:
+def _split_by_experience_blocks(text: str) -> list[str]:
     """Split on lines that look like experience anchors (caps title or year)."""
     ANCHOR = re.compile(
         r"(?m)^(?:"
@@ -421,7 +425,7 @@ def _split_by_experience_blocks(text: str) -> List[str]:
     if len(positions) < 2:
         return _split_by_paragraphs(text)
 
-    blocks: List[str] = []
+    blocks: list[str] = []
     if positions[0] > 0:
         blocks.append(text[: positions[0]].strip())
     for i, pos in enumerate(positions):
@@ -431,14 +435,14 @@ def _split_by_experience_blocks(text: str) -> List[str]:
     return [b for b in blocks if b]
 
 
-def _split_by_paragraphs(text: str) -> List[str]:
+def _split_by_paragraphs(text: str) -> list[str]:
     paragraphs = re.split(r"\n{2,}", text)
     return [p.strip() for p in paragraphs if p.strip()]
 
 
-def _normalise_blocks(blocks: List[str]) -> List[str]:
+def _normalise_blocks(blocks: list[str]) -> list[str]:
     """Merge tiny blocks; hard-split oversized ones."""
-    merged: List[str] = []
+    merged: list[str] = []
     buffer = ""
     for block in blocks:
         if len(buffer) + len(block) + 2 <= MAX_CHARS:
@@ -450,7 +454,7 @@ def _normalise_blocks(blocks: List[str]) -> List[str]:
     if buffer:
         merged.append(buffer)
 
-    result: List[str] = []
+    result: list[str] = []
     for block in merged:
         if len(block) <= MAX_CHARS:
             result.append(block)
@@ -459,9 +463,9 @@ def _normalise_blocks(blocks: List[str]) -> List[str]:
     return result
 
 
-def _hard_split(text: str) -> List[str]:
+def _hard_split(text: str) -> list[str]:
     """Last-resort split on character count with newline-aware boundary."""
-    chunks: List[str] = []
+    chunks: list[str] = []
     start = 0
     while start < len(text):
         end = min(start + MAX_CHARS, len(text))

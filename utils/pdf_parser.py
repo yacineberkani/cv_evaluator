@@ -4,12 +4,11 @@ Extracts raw text from PDF files with page tracking.
 """
 
 import fitz  # PyMuPDF
-import io
-from typing import Optional
 
 
 class PDFExtractionError(Exception):
     """Custom exception for PDF extraction errors."""
+
     pass
 
 
@@ -37,12 +36,16 @@ def extract_text_from_pdf(pdf_content: bytes) -> str:
             if text.strip():
                 full_text.append(f"--- PAGE {page_num + 1} ---\n{text}")
         except Exception as e:
-            raise PDFExtractionError(f"Erreur lors de l'extraction de la page {page_num + 1}: {str(e)}")
+            raise PDFExtractionError(
+                f"Erreur lors de l'extraction de la page {page_num + 1}: {str(e)}"
+            )
 
     doc.close()
 
     if not full_text:
-        raise PDFExtractionError("Le PDF ne contient aucun texte extractible (scanné ou image uniquement).")
+        raise PDFExtractionError(
+            "Le PDF ne contient aucun texte extractible (scanné ou image uniquement)."
+        )
 
     return "\n\n".join(full_text)
 

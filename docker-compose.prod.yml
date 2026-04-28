@@ -1,0 +1,22 @@
+# docker-compose.prod.yml
+# Configuration pour le déploiement en production
+
+version: "3.8"
+
+services:
+  cv-evaluator:
+    image: ${DOCKER_USERNAME:-yacineberkani}/cv-evaluator:latest
+    container_name: cv-evaluator
+    restart: unless-stopped
+    ports:
+      - "8501:8501"
+    environment:
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      - GEMINI_MODEL=${GEMINI_MODEL:-gemini-2.5-flash-lite}
+      - GEMINI_TEMPERATURE=${GEMINI_TEMPERATURE:-0}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8501"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s

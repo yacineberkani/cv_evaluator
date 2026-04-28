@@ -4,8 +4,9 @@ SkillsEducationAgent - Evaluates skills and education sections.
 
 import json
 import logging
+
 from agents.base_agent import BaseAgent
-from models.schemas import SkillsEducationOutput, ExperienceAnalysisOutput
+from models.schemas import ExperienceAnalysisOutput, SkillsEducationOutput
 from prompts.templates import SKILLS_EDUCATION_PROMPT
 
 logger = logging.getLogger(__name__)

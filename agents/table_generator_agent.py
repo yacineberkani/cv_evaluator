@@ -4,12 +4,13 @@ TableGeneratorAgent - Generates structured evaluation table.
 
 import json
 import logging
+
 from agents.base_agent import BaseAgent
 from models.schemas import (
-    TableGeneratorOutput,
     ExperienceAnalysisOutput,
     SkillsEducationOutput,
     SummaryValidationOutput,
+    TableGeneratorOutput,
 )
 from prompts.templates import TABLE_GENERATOR_PROMPT
 
@@ -57,7 +58,5 @@ class TableGeneratorAgent(BaseAgent):
         )
 
         result = self._call_llm_with_retry(prompt, TableGeneratorOutput)
-        logger.info(
-            f"[{self.name}] Table generated with {len(result.lignes)} rows."
-        )
+        logger.info(f"[{self.name}] Table generated with {len(result.lignes)} rows.")
         return result
