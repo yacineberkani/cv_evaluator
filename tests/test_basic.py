@@ -1,8 +1,9 @@
 # tests/test_basic.py
 # Tests ultra-simples pour vérifier que le CI fonctionne
 
+
 def test_python_works():
-    """Vérifie que Python fonctionne (test de base)."""
+    """Vérifie que Python fonctionne."""
     assert 1 + 1 == 2
 
 
@@ -32,7 +33,7 @@ def test_import_standard_library():
     import json
     import os
     import sys
-    
+
     assert json is not None
     assert os is not None
     assert sys is not None
