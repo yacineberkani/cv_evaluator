@@ -1,0 +1,94 @@
+# .github/workflows/deploy.yml
+# Workflow de déploiement sur un VPS
+#
+# Se déclenche après un push réussi sur main.
+
+name: 🚀 Deploy
+
+on:
+  # Déclenché manuellement (bouton dans GitHub)
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: "Confirmer le déploiement ?"
+        required: true
+        type: boolean
+        default: false
+  
+  # Ou automatiquement après le build Docker
+  workflow_run:
+    workflows: ["🐳 Docker Build"]
+    types: [completed]
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: "🚀 Deploy to VPS"
+    runs-on: ubuntu-latest
+    
+    # Exécuter seulement si le workflow précédent a réussi
+    if: |
+      github.event_name == 'workflow_dispatch' && github.event.inputs.confirm == 'true'
+      || (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')
+    
+    environment:
+      name: production
+      url: http://${{ secrets.VPS_HOST }}:8501
+    
+    steps:
+      - name: "📥 Checkout code"
+        uses: actions/checkout@v4
+      
+      # Copie du docker-compose sur le VPS
+      - name: "📁 Copy docker-compose to VPS"
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          source: "docker-compose.prod.yml"
+          target: "/opt/cv-evaluator/"
+      
+      # Déploiement via SSH
+      - name: "🚀 Deploy via SSH"
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: |
+            cd /opt/cv-evaluator
+            
+            # Pull la dernière image
+            docker pull ${{ secrets.DOCKER_USERNAME }}/cv-evaluator:latest
+            
+            # Arrête l'ancien conteneur
+            docker compose -f docker-compose.prod.yml down || true
+            
+            # Démarre le nouveau conteneur
+            docker compose -f docker-compose.prod.yml up -d
+            
+            # Nettoie les anciennes images
+            docker image prune -f
+            
+            # Vérifie que le conteneur tourne
+            docker ps | grep cv-evaluator
+            
+            echo "✅ Déploiement terminé !"
+      
+      # Vérification de santé
+      - name: "🏥 Health Check"
+        run: |
+          echo "⏳ Attente du démarrage de l'application..."
+          sleep 30
+          
+          RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" http://${{ secrets.VPS_HOST }}:8501 || echo "000")
+          
+          if [ "$RESPONSE" = "200" ]; then
+            echo "✅ L'application est accessible (HTTP 200)"
+          else
+            echo "⚠️ Réponse: $RESPONSE (l'application démarre peut-être encore)"
+          fi
