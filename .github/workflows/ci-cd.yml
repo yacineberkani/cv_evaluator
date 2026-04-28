@@ -117,40 +117,40 @@ jobs:
           # On vide le Space (sauf .git)
           find . -maxdepth 1 -not -name '.git' -not -name '.' -exec rm -rf {} +
           
-          # On prend TOUT le projet GitHub (dont le fichier .env)
-          rsync -av --exclude='.git' \
-                     --exclude='venv' \
-                     --exclude='tests' \
-                     --exclude='.github' \
-                     --exclude='__pycache__' \
-                     --exclude='.pytest_cache' \
-                     $GITHUB_WORKSPACE/ .
+          # On prend TOUT le projet GitHub
+          rsync -av --exclude='.git' --exclude='venv' --exclude='tests' --exclude='.github' --exclude='__pycache__' --exclude='.pytest_cache' $GITHUB_WORKSPACE/ .
           
-          # On écrase le Dockerfile avec celui spécifique à Hugging Face (Port 7860 obligatoire)
-          cat > Dockerfile << 'EOF'
-          FROM python:3.11-slim
-          WORKDIR /app
-          RUN apt-get update && apt-get install -y --no-install-recommends build-essential && rm -rf /var/lib/apt/lists/*
-          COPY requirements.txt .
-          RUN pip install --no-cache-dir -r requirements.txt
-          COPY .env .
-          COPY . .
-          EXPOSE 7860
-          CMD ["streamlit", "run", "app.py", "--server.port=7860", "--server.address=0.0.0.0"]
-          EOF
+          # ⚠️ Vérification cruciale : le fichier .env est-il là ?
+          if [ ! -f .env ]; then
+            echo "❌ ERREUR : Le fichier .env n'est pas sur GitHub !"
+            echo "Pour régler ça, tape cette commande sur ton PC :"
+            echo "git add -f .env"
+            echo "git commit -m 'add .env'"
+            echo "git push"
+            exit 1
+          fi
           
-          # On crée le README pour Hugging Face
-          cat > README.md << 'EOF'
-          ---
-          title: CV Evaluator
-          emoji: "🧠"
-          colorFrom: blue
-          colorTo: purple
-          sdk: docker
-          app_port: 7860
-          pinned: false
-          ---
-          EOF
+          # Création du Dockerfile (Méthode echo : 100% fiable, pas de problème d'indentation)
+          echo "FROM python:3.11-slim" > Dockerfile
+          echo "WORKDIR /app" >> Dockerfile
+          echo "RUN apt-get update && apt-get install -y --no-install-recommends build-essential && rm -rf /var/lib/apt/lists/*" >> Dockerfile
+          echo "COPY requirements.txt ." >> Dockerfile
+          echo "RUN pip install --no-cache-dir -r requirements.txt" >> Dockerfile
+          echo "COPY .env ." >> Dockerfile
+          echo "COPY . ." >> Dockerfile
+          echo "EXPOSE 7860" >> Dockerfile
+          echo 'CMD ["streamlit", "run", "app.py", "--server.port=7860", "--server.address=0.0.0.0"]' >> Dockerfile
+          
+          # Création du README Hugging Face
+          echo "---" > README.md
+          echo "title: CV Evaluator" >> README.md
+          echo 'emoji: "🧠"' >> README.md
+          echo "colorFrom: blue" >> README.md
+          echo "colorTo: purple" >> README.md
+          echo "sdk: docker" >> README.md
+          echo "app_port: 7860" >> README.md
+          echo "pinned: false" >> README.md
+          echo "---" >> README.md
           
           git add .
           git commit -m "Deploy"
