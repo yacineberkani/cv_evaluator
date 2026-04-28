@@ -105,7 +105,6 @@ jobs:
     runs-on: ubuntu-latest
     needs: build
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    # continue-on-error: true garantit que le pipeline sera VERT même si HF bloque
     continue-on-error: true 
     steps:
       - name: Checkout
@@ -122,16 +121,25 @@ jobs:
             exit 0
           fi
           
+          # 1. Configure Git pour ne JAMAIS demander le mot de passe à l'écran
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git config --global user.name "github-actions[bot]"
+          git config --global credential.helper store
+          
+          # 2. Donne le token à Git dans un fichier caché
+          echo "https://hf_user:${HF_TOKEN}@huggingface.co" > ~/.git-credentials
+          
           echo "🚀 Déploiement vers https://huggingface.co/spaces/$HF_USERNAME/$SPACE_NAME ..."
           
-          git clone https://$HF_TOKEN@huggingface.co/spaces/$HF_USERNAME/$SPACE_NAME hf_space || {
-            echo "❌ Erreur 128 : Vérifie ton HF_TOKEN (Write access) et le nom du Space."
-            exit 1
-          }
+          # 3. Maintenant le clone va marcher sans rien demander !
+          git clone https://huggingface.co/spaces/$HF_USERNAME/$SPACE_NAME hf_space
           
           cd hf_space
+          
+          # Nettoyage
           find . -maxdepth 1 -not -name '.git' -not -name '.' -exec rm -rf {} +
           
+          # Copie du code
           cp $GITHUB_WORKSPACE/app.py .
           cp -r $GITHUB_WORKSPACE/agents .
           cp -r $GITHUB_WORKSPACE/models .
@@ -139,6 +147,7 @@ jobs:
           cp -r $GITHUB_WORKSPACE/utils .
           cp $GITHUB_WORKSPACE/requirements.txt .
           
+          # Création du Dockerfile HF
           cat > Dockerfile << 'EOF'
           FROM python:3.11-slim
           WORKDIR /app
@@ -150,6 +159,7 @@ jobs:
           CMD ["streamlit", "run", "app.py", "--server.port=7860", "--server.address=0.0.0.0"]
           EOF
           
+          # Création du README HF
           cat > README.md << 'EOF'
           ---
           title: CV Evaluator
@@ -162,8 +172,8 @@ jobs:
           ---
           EOF
           
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git config user.name "github-actions[bot]"
           git add .
           git commit -m "Deploy from GitHub CI/CD"
           git push
+          
+          echo "✅ Déployé avec succès!"
