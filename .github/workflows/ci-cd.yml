@@ -139,8 +139,8 @@ jobs:
           # Nettoyage
           find . -maxdepth 1 -not -name '.git' -not -name '.' -exec rm -rf {} +
           
-          # Copie du code
-          cp $GITHUB_WORKSPACE/app.py .
+          # Copie de tous les fichiers Python et dossiers
+          cp $GITHUB_WORKSPACE/*.py .
           cp -r $GITHUB_WORKSPACE/agents .
           cp -r $GITHUB_WORKSPACE/models .
           cp -r $GITHUB_WORKSPACE/prompts .
