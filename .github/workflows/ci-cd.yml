@@ -30,7 +30,6 @@ jobs:
           pip install ruff
           pip install -r requirements.txt
       
-      # J'ai enlevé --output-format=github pour ne plus polluer l'interface avec des warnings
       - name: Ruff lint
         run: ruff check . || true
         continue-on-error: true
@@ -115,51 +114,64 @@ jobs:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
           HF_USERNAME: ${{ secrets.HF_USERNAME }}
           SPACE_NAME: ${{ secrets.HF_SPACE_NAME }}
+          MY_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
         run: |
           if [ -z "$HF_TOKEN" ] || [ -z "$HF_USERNAME" ] || [ -z "$SPACE_NAME" ]; then
             echo "⚠️ Secrets HF manquants. Déploiement ignoré."
             exit 0
           fi
           
-          # 1. Configure Git pour ne JAMAIS demander le mot de passe à l'écran
+          # Configuration Git
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git config --global user.name "github-actions[bot]"
           git config --global credential.helper store
-          
-          # 2. Donne le token à Git dans un fichier caché
           echo "https://hf_user:${HF_TOKEN}@huggingface.co" > ~/.git-credentials
           
           echo "🚀 Déploiement vers https://huggingface.co/spaces/$HF_USERNAME/$SPACE_NAME ..."
-          
-          # 3. Maintenant le clone va marcher sans rien demander !
           git clone https://huggingface.co/spaces/$HF_USERNAME/$SPACE_NAME hf_space
           
+          # On se place dans le Space
           cd hf_space
           
-          # Nettoyage
+          # On vide le Space (sauf le dossier .git de HF)
           find . -maxdepth 1 -not -name '.git' -not -name '.' -exec rm -rf {} +
           
-          # Copie de tous les fichiers Python et dossiers
-          cp $GITHUB_WORKSPACE/*.py .
-          cp -r $GITHUB_WORKSPACE/agents .
-          cp -r $GITHUB_WORKSPACE/models .
-          cp -r $GITHUB_WORKSPACE/prompts .
-          cp -r $GITHUB_WORKSPACE/utils .
-          cp $GITHUB_WORKSPACE/requirements.txt .
+          # ==========================================
+          # 🚀 LA NOUVELLE MÉTHODE : ON COPIE TOUT !
+          # ==========================================
+          # On copie absolument tout le projet
+          cp -r $GITHUB_WORKSPACE/* .
           
-          # Création du Dockerfile HF
+          # On supprime ce qui n'est pas utile pour l'application Streamlit
+          rm -rf venv
+          rm -rf .github
+          rm -rf tests
+          rm -rf .gitignore
+          rm -rf docker-compose.prod.yml
+          
+          # ==========================================
+          # On crée le fichier .env avec la clé
+          # ==========================================
+          echo "GOOGLE_API_KEY=$MY_API_KEY" > .env
+          
+          # ==========================================
+          # On crée le Dockerfile
+          # ==========================================
           cat > Dockerfile << 'EOF'
           FROM python:3.11-slim
           WORKDIR /app
           RUN apt-get update && apt-get install -y --no-install-recommends build-essential && rm -rf /var/lib/apt/lists/*
           COPY requirements.txt .
           RUN pip install --no-cache-dir -r requirements.txt
+          COPY .env .
           COPY . .
           EXPOSE 7860
           CMD ["streamlit", "run", "app.py", "--server.port=7860", "--server.address=0.0.0.0"]
           EOF
           
-          # Création du README HF
+          # ==========================================
+          # On crée le README pour Hugging Face
+          # ==========================================
           cat > README.md << 'EOF'
           ---
           title: CV Evaluator
@@ -172,8 +184,9 @@ jobs:
           ---
           EOF
           
+          # On envoie tout sur Hugging Face
           git add .
-          git commit -m "Deploy from GitHub CI/CD"
+          git commit -m "Deploy full project from GitHub CI/CD"
           git push
           
           echo "✅ Déployé avec succès!"
