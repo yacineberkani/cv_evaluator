@@ -11,6 +11,9 @@ permissions:
   contents: read
 
 jobs:
+  # ==========================================
+  # JOB 1 : QUALITÉ
+  # ==========================================
   quality:
     name: "Code Quality"
     runs-on: ubuntu-latest
@@ -25,6 +28,9 @@ jobs:
       - run: ruff format --check . || true
         continue-on-error: true
 
+  # ==========================================
+  # JOB 2 : TESTS
+  # ==========================================
   test:
     name: "Tests"
     runs-on: ubuntu-latest
@@ -37,10 +43,53 @@ jobs:
       - run: pip install pytest && pip install -r requirements.txt
       - run: pytest tests/ -v
 
+  # ==========================================
+  # JOB 3 : BUILD DOCKER
+  # ==========================================
+  build:
+    name: "Docker Build"
+    runs-on: ubuntu-latest
+    needs: test
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+        continue-on-error: true
+      
+      - name: Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ secrets.DOCKER_USERNAME }}/cv-evaluator
+          tags: |
+            type=raw,value=latest
+            type=sha,prefix=
+      
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: ${{ secrets.DOCKER_USERNAME != '' }}
+          load: true
+          tags: ${{ steps.meta.outputs.tags }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ==========================================
+  # JOB 4 : DÉPLOIEMENT HUGGING FACE
+  # ==========================================
   deploy:
     name: "Deploy to Hugging Face"
     runs-on: ubuntu-latest
-    needs: test
+    needs: build
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     continue-on-error: true 
     steps:
@@ -68,7 +117,7 @@ jobs:
           # On vide le Space (sauf .git)
           find . -maxdepth 1 -not -name '.git' -not -name '.' -exec rm -rf {} +
           
-          # On prend TOUT le projet GitHub (y compris le fichier .env)
+          # On prend TOUT le projet GitHub (dont le fichier .env)
           rsync -av --exclude='.git' \
                      --exclude='venv' \
                      --exclude='tests' \
@@ -77,7 +126,7 @@ jobs:
                      --exclude='.pytest_cache' \
                      $GITHUB_WORKSPACE/ .
           
-          # On crée le Dockerfile pour Hugging Face
+          # On écrase le Dockerfile avec celui spécifique à Hugging Face (Port 7860 obligatoire)
           cat > Dockerfile << 'EOF'
           FROM python:3.11-slim
           WORKDIR /app
