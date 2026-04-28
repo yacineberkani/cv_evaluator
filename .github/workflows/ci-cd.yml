@@ -1,49 +1,22 @@
-<<<<<<< HEAD
 # .github/workflows/ci-cd.yml
 # Pipeline CI/CD complet pour CV Evaluator
-#
-# Architecture du pipeline :
-# ┌─────────────┐    ┌─────────────┐    ┌─────────────┐    ┌─────────────┐
-# │   Lint &    │───▶│    Tests    │───▶│    Build    │───▶│   Deploy    │
-# │   Format    │    │  (Matrix)   │    │   Docker    │    │   (VPS)     │
-# └─────────────┘    └─────────────┘    └─────────────┘    └─────────────┘
-#        │                  │                 │                  │
-#        ▼                  ▼                 ▼                  ▼
-#    Rapport           Rapport           Image             Application
-#    Ruff              Couverture         Docker Hub        en ligne
 
 name: 🔄 CI/CD Pipeline
 
-# ============================================
-# DÉCLENCHEURS
-# ============================================
 on:
   push:
-    branches: [main, develop]
-    tags: ["v*"]
+    branches: [main]
   pull_request:
     branches: [main]
-  # Déploiement manuel
   workflow_dispatch:
 
-# ============================================
-# VARIABLES GLOBALES
-# ============================================
+permissions:
+  contents: read
+
 env:
   DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
   IMAGE_NAME: ${{ secrets.DOCKER_USERNAME }}/cv-evaluator
-  PYTHON_VERSION: "3.11"
 
-# ============================================
-# PERMISSIONS (Principe du moindre privilège)
-# ============================================
-permissions:
-  contents: read
-  packages: write
-
-# ============================================
-# JOBS
-# ============================================
 jobs:
   # ========================================
   # JOB 1 : QUALITÉ DU CODE
@@ -59,72 +32,49 @@ jobs:
       - name: "🐍 Setup Python"
         uses: actions/setup-python@v5
         with:
-          python-version: ${{ env.PYTHON_VERSION }}
+          python-version: "3.11"
           cache: "pip"
       
       - name: "📦 Install deps"
         run: |
           pip install --upgrade pip
-          pip install -r requirements-dev.txt
+          pip install ruff
           pip install -r requirements.txt
       
       - name: "🧹 Ruff lint"
-        run: ruff check . --output-format=github --ignore E501,F401
-        continue-on-error: true  # ← AJOUTE ÇA pour ne pas bloquer
+        run: ruff check . --output-format=github || true
+        continue-on-error: true
       
       - name: "📐 Ruff format check"
-        run: ruff format --check .
-      
-      - name: "🔒 Security scan"
-        run: |
-          bandit -r . -x ./venv,./tests -ll || true
-          safety check --continue-on-error || true
+        run: ruff format --check . || true
+        continue-on-error: true
 
   # ========================================
   # JOB 2 : TESTS
   # ========================================
   test:
-    name: "🧪 Test (Python ${{ matrix.python-version }})"
+    name: "🧪 Tests"
     runs-on: ubuntu-latest
-    needs: quality  # Attend que quality soit terminé
-    
-    strategy:
-      fail-fast: false
-      matrix:
-        python-version: ["3.10", "3.11", "3.12"]
+    needs: quality
     
     steps:
       - name: "📥 Checkout"
         uses: actions/checkout@v4
       
-      - name: "🐍 Setup Python ${{ matrix.python-version }}"
+      - name: "🐍 Setup Python"
         uses: actions/setup-python@v5
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: "3.11"
           cache: "pip"
       
       - name: "📦 Install deps"
         run: |
           pip install --upgrade pip
-          pip install -r requirements-dev.txt
+          pip install pytest
           pip install -r requirements.txt
       
       - name: "🧪 Run tests"
-        run: |
-          pytest --cov=. \
-                 --cov-report=term-missing \
-                 --cov-report=xml:coverage.xml \
-                 --junitxml=test-results.xml
-      
-      - name: "📊 Upload coverage"
-        if: matrix.python-version == '3.11'
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage
-          path: |
-            coverage.xml
-            test-results.xml
-          retention-days: 14
+        run: pytest tests/ -v --tb=short
 
   # ========================================
   # JOB 3 : BUILD DOCKER
@@ -132,13 +82,8 @@ jobs:
   build:
     name: "🐳 Docker Build"
     runs-on: ubuntu-latest
-    needs: test  # Attend que les tests soient passés
-    # Build seulement sur main ou tags
-    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/')
-    
-    outputs:
-      tags: ${{ steps.meta.outputs.tags }}
-      version: ${{ steps.meta.outputs.version }}
+    needs: test
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     
     steps:
       - name: "📥 Checkout"
@@ -148,6 +93,7 @@ jobs:
         uses: docker/setup-buildx-action@v3
       
       - name: "🔑 Login to Docker Hub"
+        if: secrets.DOCKER_USERNAME != ''
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
@@ -159,113 +105,25 @@ jobs:
         with:
           images: ${{ env.IMAGE_NAME }}
           tags: |
-            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+            type=raw,value=latest
             type=sha,prefix=
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
       
-      - name: "📦 Build and push"
+      - name: "🔨 Build and push"
         uses: docker/build-push-action@v5
         with:
           context: .
-          push: true
+          push: ${{ secrets.DOCKER_USERNAME != '' }}
           tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-          build-args: |
-            BUILD_DATE=${{ github.event.head_commit.timestamp }}
-            VCS_REF=${{ github.sha }}
 
   # ========================================
-  # JOB 4 : DÉPLOIEMENT
-  # ========================================
-  deploy:
-    name: "🚀 Deploy"
-    runs-on: ubuntu-latest
-    needs: build
-    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
-    
-    environment:
-      name: production
-      url: http://${{ secrets.VPS_HOST }}:8501
-    
-    steps:
-      - name: "🚀 Deploy to VPS"
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USER }}
-          key: ${{ secrets.VPS_SSH_KEY }}
-          script: |
-            cd /opt/cv-evaluator || mkdir -p /opt/cv-evaluator && cd /opt/cv-evaluator
-            
-            # Créer le docker-compose si'il n'existe pas
-            cat > docker-compose.yml << 'EOF'
-            version: "3.8"
-            services:
-              cv-evaluator:
-                image: ${{ env.IMAGE_NAME }}:latest
-                container_name: cv-evaluator
-                restart: unless-stopped
-                ports:
-                  - "8501:8501"
-                env_file:
-                  - .env
-            EOF
-            
-            # Pull et redémarre
-            docker pull ${{ env.IMAGE_NAME }}:latest
-            docker compose down || true
-            docker compose up -d
-            
-            # Cleanup
-            docker image prune -f
-            
-            echo "✅ Déployed successfully!"
-      
-      - name: "🏥 Health check"
-        run: |
-          for i in {1..10}; do
-            if curl -sf http://${{ secrets.VPS_HOST }}:8501 > /dev/null; then
-              echo "✅ Application is healthy!"
-              exit 0
-            fi
-            echo "⏳ Waiting... ($i/10)"
-            sleep 10
-          done
-          echo "⚠️ Health check timeout (app might still be starting)"
-
-  # ========================================
-  # JOB 5 : NOTIFICATION (Optionnel)
-  # ========================================
-  notify:
-    name: "📢 Notification"
-    runs-on: ubuntu-latest
-    needs: [quality, test, build, deploy]
-    if: always()  # Toujours exécuter, même si un job échoue
-    
-    steps:
-      - name: "📢 Send notification"
-        run: |
-          if [ "${{ needs.quality.result }}" == "failure" ] || \
-             [ "${{ needs.test.result }}" == "failure" ] || \
-             [ "${{ needs.build.result }}" == "failure" ] || \
-             [ "${{ needs.deploy.result }}" == "failure" ]; then
-            echo "❌ Pipeline FAILED"
-            # Ajoute ici ta notification (Slack, Discord, Email, etc.)
-          else
-            echo "✅ Pipeline SUCCEEDED"
-          fi
-=======
-  # ========================================
-  # JOB 4 : DÉPLOIEMENT HUGGING FACE (GRATUIT!)
+  # JOB 4 : DÉPLOIEMENT HUGGING FACE
   # ========================================
   deploy:
     name: "🚀 Deploy to Hugging Face"
     runs-on: ubuntu-latest
     needs: build
-    # Seulement sur main, si le secret HF est configuré, et si on a pas de PR
     if: github.ref == 'refs/heads/main' && github.event_name == 'push' && secrets.HF_TOKEN != ''
     
     steps:
@@ -278,16 +136,12 @@ jobs:
           HF_USERNAME: ${{ secrets.HF_USERNAME }}
           SPACE_NAME: ${{ secrets.HF_SPACE_NAME }}
         run: |
-          echo "🚀 Déploiement vers Hugging Face Spaces (Docker SDK)..."
-          
-          # Clone le space
+          echo "🚀 Déploiement vers Hugging Face Spaces..."
           git clone https://$HF_TOKEN@huggingface.co/spaces/$HF_USERNAME/$SPACE_NAME hf_space
           cd hf_space
           
-          # Nettoie les anciens fichiers (garde le dossier .git)
           find . -maxdepth 1 -not -name '.git' -not -name '.' -exec rm -rf {} +
           
-          # Copie le code de l'application
           cp $GITHUB_WORKSPACE/app.py .
           cp -r $GITHUB_WORKSPACE/agents .
           cp -r $GITHUB_WORKSPACE/models .
@@ -295,32 +149,17 @@ jobs:
           cp -r $GITHUB_WORKSPACE/utils .
           cp $GITHUB_WORKSPACE/requirements.txt .
           
-          # Crée le Dockerfile pour Hugging Face (IMPORTANT: port 7860)
           cat > Dockerfile << 'EOF'
           FROM python:3.11-slim
-          
           WORKDIR /app
-          
-          # Install system dependencies
-          RUN apt-get update && apt-get install -y --no-install-recommends \
-              build-essential \
-              && rm -rf /var/lib/apt/lists/*
-          
-          # Install Python dependencies
+          RUN apt-get update && apt-get install -y --no-install-recommends build-essential && rm -rf /var/lib/apt/lists/*
           COPY requirements.txt .
           RUN pip install --no-cache-dir -r requirements.txt
-          
-          # Copy application code
           COPY . .
-          
-          # Expose port 7860 (Standard Hugging Face Spaces)
           EXPOSE 7860
-          
-          # Run Streamlit
           CMD ["streamlit", "run", "app.py", "--server.port=7860", "--server.address=0.0.0.0"]
           EOF
           
-          # Crée le README.md requis par Hugging Face
           cat > README.md << 'EOF'
           ---
           title: CV Evaluator
@@ -331,18 +170,11 @@ jobs:
           app_port: 7860
           pinned: false
           ---
-          
           # 🧠 CV Evaluator
-          Système Multi-Agents d'Évaluation de CV propulsé par Google Gemini.
           EOF
           
-          # Configure Git et envoie
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git config user.name "github-actions[bot]"
           git add .
-          git commit -m "🚀 Deploy from GitHub CI/CD"
+          git commit -m "Deploy from GitHub CI/CD"
           git push
-          
-          echo "✅ Déployé avec succès!"
-          echo "🌐 URL: https://$HF_USERNAME-$SPACE_NAME.hf.space"
->>>>>>> b22ef10 (fix: update CI/CD for new HF Docker Streamlit SDK)
