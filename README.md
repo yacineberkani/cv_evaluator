@@ -1,4 +1,4 @@
-# 🧠 CV Evaluator — Système Multi-Agents d'Évaluation de CV
+# CV Evaluator — Système Multi-Agents d'Évaluation de CV
 
 [![CI/CD Pipeline](https://github.com/yacineberkani/cv_evaluator/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/yacineberkani/cv_evaluator/actions/workflows/ci-cd.yml)
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-blue?logo=python)](https://www.python.org/)
@@ -266,7 +266,7 @@ Une fois les secrets configurés, chaque `git push` sur `main` déclenche automa
 
 Le pipeline CI/CD passe intégralement — qualité, tests, build Docker et déploiement Hugging Face sont tous au vert.
 
-<img width="1510" height="968" alt="Image" src="https://github.com/user-attachments/assets/1f943862-df47-478d-a4d7-3f440b35783a" />
+<img width="1658" height="447" alt="Image" src="https://github.com/user-attachments/assets/a96ee773-e521-4391-9259-fdd63a53c0f3" />
 
 ---
 
