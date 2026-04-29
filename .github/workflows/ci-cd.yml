@@ -116,40 +116,41 @@ jobs:
             echo "⚠️ Secrets HF manquants."
             exit 0
           fi
+
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git config --global user.name "github-actions[bot]"
           git config --global credential.helper store
           echo "https://hf_user:${HF_TOKEN}@huggingface.co" > ~/.git-credentials
 
-          git clone https://huggingface.co/spaces/$HF_USERNAME/$SPACE_NAME hf_space
-          cd hf_space
+          # Cloner le Space dans un dossier temporaire hors du workspace
+          TMP_HF=$(mktemp -d)
+          git clone https://huggingface.co/spaces/$HF_USERNAME/$SPACE_NAME "$TMP_HF/hf_space"
+          cd "$TMP_HF/hf_space"
 
-          # On vide le dossier du Space
+          # Vider le dépôt
           git rm -rf . || true
           git clean -fdx || true
 
-          # Copie du projet dans un temporaire pour éviter les erreurs
-          cp -r $GITHUB_WORKSPACE /tmp/workspace_copy
-          rm -rf /tmp/workspace_copy/.git
+          # Copier le workspace en excluant les dossiers/fichiers sensibles
+          rsync -av --exclude='.git' --exclude='hf_space' --exclude='.env' --exclude='venv' --exclude='tests' --exclude='.github' --exclude='__pycache__' --exclude='.pytest_cache' --exclude='.dockerignore' "$GITHUB_WORKSPACE/" .
 
-          # Copie de tout le contenu (y compris le fichier .env caché)
-          cp -a /tmp/workspace_copy/. .
+          # Suppression explicite du .env si présent (sécurité)
+          rm -f .env 2>/dev/null || true
 
-          # On nettoie ce qui ne sert pas sur Hugging Face
-          rm -rf venv tests .github __pycache__ .pytest_cache .dockerignore
+          # Créer le README Hugging Face correct
+          cat > README.md << 'YAML_EOF'
+          ---
+          title: CV Evaluator
+          emoji: 📄
+          colorFrom: blue
+          colorTo: purple
+          sdk: docker
+          app_port: 7860
+          pinned: false
+          ---
+          YAML_EOF
 
-          # Création du README Hugging Face
-          echo "---" > README.md
-          echo "title: CV Evaluator" >> README.md
-          echo "emoji: """ >> README.md
-          echo "colorFrom: blue" >> README.md
-          echo "colorTo: purple" >> README.md
-          echo "sdk: docker" >> README.md
-          echo "app_port: 7860" >> README.md
-          echo "pinned: false" >> README.md
-          echo "---" >> README.md
-
-          # Envoi sur Hugging Face
+          # Commit et push
           git add .
-          git commit -m "Deploy"
+          git commit -m "Deploy" || echo "Nothing to commit"
           git push
