@@ -28,6 +28,9 @@ FROM base AS final
 # Copie les dépendances installées depuis l'étape précédente
 COPY --from=dependencies /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
 
+# AJOUT CRUCIAL : copier les binaires (streamlit, etc.)
+COPY --from=dependencies /usr/local/bin /usr/local/bin
+
 # Copie tout le code de l'application avec les bons propriétaires
 COPY --chown=user:user . .
 
