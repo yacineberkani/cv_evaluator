@@ -266,7 +266,7 @@ Une fois les secrets configurés, chaque `git push` sur `main` déclenche automa
 
 Le pipeline CI/CD passe intégralement — qualité, tests, build Docker et déploiement Hugging Face sont tous au vert.
 
-![CI/CD Pipeline Success](./assets/ci-cd-success.png)
+<img width="1510" height="968" alt="Image" src="https://github.com/user-attachments/assets/1f943862-df47-478d-a4d7-3f440b35783a" />
 
 ---
 
