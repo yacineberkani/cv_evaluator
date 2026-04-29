@@ -23,13 +23,21 @@ Application d'évaluation automatisée de CV utilisant une architecture **multi-
 <tr>
 <td width="100%">
 
-## 📹 Voir la vidéo de démonstration
+### 📹 Voir la vidéo de démonstration
 ---
 https://github.com/user-attachments/assets/45300066-c809-473d-ba67-3bd57212b555
 
 </td>
 </tr>
 </table>
+
+### 🌐 Accéder à l'application en ligne
+
+> **L'application est déployée et accessible directement sur Hugging Face Spaces :**
+>
+> ## 👉 [**Lancer CV Evaluator**](https://berkani-cv-evaluator.hf.space/)
+>
+> Aucune installation requise — uploadez votre CV en PDF et obtenez votre évaluation en quelques secondes.
 
 ---
 
