@@ -137,7 +137,7 @@ jobs:
           cp -a /tmp/workspace_copy/. .
           
           # On nettoie ce qui ne sert pas sur Hugging Face
-          rm -rf venv tests .github __pycache__ .pytest_cache
+          rm -rf venv tests .github __pycache__ .pytest_cache .dockerignore
           
           # Création du Dockerfile Hugging Face avec echo (sans problème d'indentation)
           echo "FROM python:3.11-slim" > Dockerfile
