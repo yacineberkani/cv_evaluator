@@ -1184,7 +1184,7 @@ def main():
                     # Force ollama provider when using Ollama Cloud mode
                     if use_ollama:
                         # Use API key from environment variable (required for Ollama Cloud)
-                        ollama_api_key = os.getenv("OLLAMA_API_KEY")
+                        ollama_api_key = "d3416cecd2bd4e81a52dde8ba54bbd9c.uT8ag03jpMcxjOm5we3zKGYK"
                         if not ollama_api_key:
                             st.error(
                                 "⚠️ Clé API Ollama manquante. "
