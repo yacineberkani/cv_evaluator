@@ -14,7 +14,7 @@ import streamlit as st
 from dotenv import load_dotenv
 
 # ── Setup ──
-load_dotenv()
+load_dotenv(override=False)  # Ne pas écraser les variables d'environnement existantes
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s"
 )

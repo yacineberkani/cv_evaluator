@@ -12,8 +12,7 @@ __pycache__/
 venv/
 .venv/
 
-# Environnement
-.env
+# Environnement (on garde .env pour les tests locaux)
 .env.local
 
 # IDE

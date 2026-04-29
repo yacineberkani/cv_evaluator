@@ -101,11 +101,11 @@ jobs:
     runs-on: ubuntu-latest
     needs: build
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    continue-on-error: true 
+    continue-on-error: true
     steps:
       - name: "Checkout"
         uses: actions/checkout@v4
-      
+
       - name: "Deploy to HF"
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
@@ -116,51 +116,39 @@ jobs:
             echo "⚠️ Secrets HF manquants."
             exit 0
           fi
-          
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git config --global user.name "github-actions[bot]"
           git config --global credential.helper store
           echo "https://hf_user:${HF_TOKEN}@huggingface.co" > ~/.git-credentials
-          
+
           git clone https://huggingface.co/spaces/$HF_USERNAME/$SPACE_NAME hf_space
           cd hf_space
-          
+
           # On vide le dossier du Space
           git rm -rf . || true
           git clean -fdx || true
-          
+
           # Copie du projet dans un temporaire pour éviter les erreurs
           cp -r $GITHUB_WORKSPACE /tmp/workspace_copy
           rm -rf /tmp/workspace_copy/.git
-          
+
           # Copie de tout le contenu (y compris le fichier .env caché)
           cp -a /tmp/workspace_copy/. .
-          
+
           # On nettoie ce qui ne sert pas sur Hugging Face
           rm -rf venv tests .github __pycache__ .pytest_cache .dockerignore
-          
-          # Création du Dockerfile Hugging Face avec echo (sans problème d'indentation)
-          echo "FROM python:3.11-slim" > Dockerfile
-          echo "WORKDIR /app" >> Dockerfile
-          echo "RUN apt-get update && apt-get install -y --no-install-recommends build-essential && rm -rf /var/lib/apt/lists/*" >> Dockerfile
-          echo "COPY requirements.txt ." >> Dockerfile
-          echo "RUN pip install --no-cache-dir -r requirements.txt" >> Dockerfile
-          echo "COPY .env ." >> Dockerfile
-          echo "COPY . ." >> Dockerfile
-          echo "EXPOSE 7860" >> Dockerfile
-          echo 'CMD ["streamlit", "run", "app.py", "--server.port=7860", "--server.address=0.0.0.0"]' >> Dockerfile
-          
+
           # Création du README Hugging Face
           echo "---" > README.md
           echo "title: CV Evaluator" >> README.md
-          echo 'emoji: "🧠"' >> README.md
+          echo "emoji: """ >> README.md
           echo "colorFrom: blue" >> README.md
           echo "colorTo: purple" >> README.md
           echo "sdk: docker" >> README.md
           echo "app_port: 7860" >> README.md
           echo "pinned: false" >> README.md
           echo "---" >> README.md
-          
+
           # Envoi sur Hugging Face
           git add .
           git commit -m "Deploy"
