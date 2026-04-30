@@ -203,22 +203,34 @@ L'application s'ouvrira sur `http://localhost:8501`.
 
 ---
 
-## 🐳 Exécution avec Docker
+## 🐳 Exécution avec Docker (via Docker Hub)
 
-Le projet inclut un **Dockerfile multi-stage** optimisé (image slim, utilisateur non-root, port 7860 compatible Hugging Face Spaces).
+L'image est publiée et maintenue sur **Docker Hub** : [`yacineberkani32/cv-evaluator`](https://hub.docker.com/r/yacineberkani32/cv-evaluator)
 
-### Build de l'image
+<img width="1914" height="919" alt="Image" src="https://github.com/user-attachments/assets/c7ab269c-1af2-4b7f-842b-c7b8bc0f4c19" />
+
+| Propriété | Valeur |
+|-----------|--------|
+| **Repository** | `yacineberkani32/cv-evaluator` |
+| **Tag stable** | `latest` |
+| **OS / Architecture** | `linux/amd64` |
+| **Taille compressée** | 251.62 MB |
+| **Runtime Python** | 3.11.15 |
+
+### Récupérer l'image depuis Docker Hub
+
+<img width="1368" height="772" alt="Image" src="https://github.com/user-attachments/assets/ac85dac9-473e-4169-a8dd-99a6b7b5ec0b" />
 
 ```bash
-docker build -t cv-evaluator .
+docker pull yacineberkani32/cv-evaluator:latest
 ```
 
-### Lancement du conteneur
+### Lancer le conteneur
 
 ```bash
 docker run -p 7860:7860 \
   -e GOOGLE_API_KEY=votre_clé_ici \
-  cv-evaluator
+  yacineberkani32/cv-evaluator:latest
 ```
 
 L'application sera accessible sur `http://localhost:7860`.
@@ -229,7 +241,16 @@ L'application sera accessible sur `http://localhost:7860`.
 docker compose -f docker-compose.prod.yml up
 ```
 
-> **Note :** Le Dockerfile expose le port `7860` — obligatoire pour Hugging Face Spaces. Le binaire `streamlit` est explicitement copié depuis l'étape `dependencies` vers l'étape finale (`COPY --from=dependencies /usr/local/bin /usr/local/bin`), ce qui est indispensable dans un build multi-stage.
+### Builder l'image localement (développement)
+
+Si vous souhaitez modifier l'image et la reconstruire :
+
+```bash
+docker build -t cv-evaluator .
+docker run -p 7860:7860 -e GOOGLE_API_KEY=votre_clé_ici cv-evaluator
+```
+
+> **Note :** L'image expose le port `7860` — requis par Hugging Face Spaces. Le binaire `streamlit` est explicitement copié depuis l'étape `dependencies` vers l'étape finale (`COPY --from=dependencies /usr/local/bin /usr/local/bin`), indispensable dans un build multi-stage non-root (UID 1000).
 
 ---
 
@@ -260,7 +281,7 @@ Rendez-vous dans **Settings → Secrets and variables → Actions** de votre rep
 | Secret | Description |
 |--------|-------------|
 | `HF_TOKEN` | Token d'accès Hugging Face (write) |
-| `HF_SPACE_NAME` | Nom du Space HF cible (ex. `yacineberkani/cv_evaluator`) |
+| `HF_SPACE_NAME` | Nom du Space HF cible (ex. `berkani/cv_evaluator`) |
 | `GOOGLE_API_KEY` | Clé API Google Gemini (injectée dans le Space) |
 | `OPENAI_API_KEY` | Clé API OpenAI (optionnel, si provider ChatGPT utilisé) |
 
