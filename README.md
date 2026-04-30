@@ -209,6 +209,7 @@ L'image est publiée et maintenue sur **Docker Hub** : [`yacineberkani32/cv-eval
 
 <img width="1914" height="919" alt="Image" src="https://github.com/user-attachments/assets/c7ab269c-1af2-4b7f-842b-c7b8bc0f4c19" />
 
+---
 | Propriété | Valeur |
 |-----------|--------|
 | **Repository** | `yacineberkani32/cv-evaluator` |
@@ -218,12 +219,12 @@ L'image est publiée et maintenue sur **Docker Hub** : [`yacineberkani32/cv-eval
 | **Runtime Python** | 3.11.15 |
 
 ### Récupérer l'image depuis Docker Hub
-
-<img width="1368" height="772" alt="Image" src="https://github.com/user-attachments/assets/ac85dac9-473e-4169-a8dd-99a6b7b5ec0b" />
-
 ```bash
 docker pull yacineberkani32/cv-evaluator:latest
 ```
+---
+<img width="1368" height="772" alt="Image" src="https://github.com/user-attachments/assets/ac85dac9-473e-4169-a8dd-99a6b7b5ec0b" />
+
 
 ### Lancer le conteneur
 
